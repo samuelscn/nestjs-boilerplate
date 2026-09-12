@@ -101,6 +101,8 @@ export class LoggingInterceptor implements NestInterceptor {
       "jwt",
       "access_token",
       "refresh_token",
+      "identityuserid",
+      "userid",
       "cpf",
       "cnpj",
     ]);

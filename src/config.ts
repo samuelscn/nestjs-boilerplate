@@ -4,6 +4,12 @@ import { SharedConfig } from "src/package/shared/module/config/util/shared.confi
 
 const appConfigSchema = z.object({
   app: z.object({ port: z.coerce.number().int().positive().default(3000) }),
+  identity: z.object({
+    provider: z.enum(["fake", "oidc"]).default("fake"),
+  }),
+  authorization: z.object({
+    mode: z.enum(["single", "tenant"]).default("single"),
+  }),
   database: z.object({
     host: z.string().min(1),
     port: z.coerce.number().int().positive().default(5432),
@@ -19,6 +25,8 @@ export type ApplicationConfig = AppConfig & SharedConfig;
 export const appConfigFactory = (): AppConfig => {
   const result = appConfigSchema.safeParse({
     app: { port: process.env.APP_PORT },
+    identity: { provider: process.env.IDENTITY_PROVIDER },
+    authorization: { mode: process.env.AUTHORIZATION_MODE },
     database: {
       host: process.env.DATABASE_HOST,
       port: process.env.DATABASE_PORT,
@@ -27,7 +35,16 @@ export const appConfigFactory = (): AppConfig => {
       name: process.env.DATABASE_NAME,
     },
   });
-  if (result.success) return result.data;
+  if (result.success) {
+    if (
+      process.env.NODE_ENV === "production" &&
+      result.data.identity.provider === "fake"
+    )
+      throw new ConfigException(
+        "IDENTITY_PROVIDER=fake is only allowed outside production",
+      );
+    return result.data;
+  }
   throw new ConfigException(
     `Invalid application configuration: ${result.error.message}`,
   );

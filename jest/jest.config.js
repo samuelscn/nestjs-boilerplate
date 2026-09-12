@@ -1,7 +1,11 @@
 module.exports = {
   moduleFileExtensions: ["js", "json", "ts"],
   rootDir: "..",
-  transform: { "^.+\\.ts$": "ts-jest" },
+  transform: {
+    "^.+\\.ts$": "ts-jest",
+    "node_modules/uuid/.+\\.js$": "<rootDir>/jest/transform/esm-to-commonjs.js",
+  },
+  transformIgnorePatterns: ["/node_modules/(?!uuid/)"],
   setupFiles: ["<rootDir>/jest/setup/setEnvironment.js"],
   moduleNameMapper: { "^src/(.*)$": "<rootDir>/src/$1" },
   testEnvironment: "node",

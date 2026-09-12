@@ -6,6 +6,7 @@ fronteiras, não para impor o nome “example” aos produtos derivados.
 ## Caminho
 
 1. `ExampleController` valida DTOs e mapeia respostas.
+   Seus endpoints exigem `Permission.example.create/read` via guard global.
 2. `ExampleService` executa o caso de uso.
 3. `ExampleItemRepository` expressa consultas e encapsula TypeORM.
 4. `ExampleItemEntity` pertence exclusivamente a este pacote.
@@ -13,6 +14,11 @@ fronteiras, não para impor o nome “example” aos produtos derivados.
 
 O módulo exporta apenas o service. Se outro pacote precisar integrá-lo, prefira
 um contrato/facade explícito em `public-api/`; nunca exporte o repository.
+
+Este exemplo tem dados globais e só entra na composição `single`. Para um produto
+multitenant, adapte a entity, o repository e sua unidade de trabalho conforme
+[o guia de isolamento](../../../docs/authorization.md) antes de registrar o módulo.
+Migrations são aplicadas no deployment, nunca automaticamente pelo runtime.
 
 ## Adaptando
 

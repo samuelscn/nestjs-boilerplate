@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { appConfigFactory } from "./config";
+import { AccessControlModule } from "./package/access-control";
 import { ExampleModule } from "./package/example";
 import { ConfigModule } from "./package/shared/module/config";
 import { LoggerModule } from "./package/shared/module/logger";
@@ -8,7 +9,12 @@ import { LoggerModule } from "./package/shared/module/logger";
   imports: [
     ConfigModule.forRoot({ load: [appConfigFactory] }),
     LoggerModule,
-    ExampleModule,
+    AccessControlModule.forRoot(appConfigFactory().authorization.mode, {
+      identityProvider: appConfigFactory().identity.provider,
+    }),
+    ...(appConfigFactory().authorization.mode === "single"
+      ? [ExampleModule]
+      : []),
   ],
 })
 export class AppModule {}

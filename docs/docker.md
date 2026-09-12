@@ -8,5 +8,12 @@ dependências de produção e metadados do pacote.
 ali são locais e devem ser substituídas em qualquer ambiente real. O volume
 preserva dados entre reinícios; `docker compose down -v` os apaga.
 
+O compose local usa `NODE_ENV=development` e `IDENTITY_PROVIDER=fake` por padrão.
+O init local cria `ginga_migrator` e `ginga_app` apenas em volumes novos. A API usa
+o login restrito; antes de iniciá-la, aplique migrations e grants seguindo
+[o guia de autorização](authorization.md#operação-e-usuários-de-banco). Não apague
+um volume existente para provisionar essas roles. Escolha `AUTHORIZATION_MODE`
+antes de criar o schema. Sem adapter do Identity Provider, endpoints retornam 401.
+
 Testes não usam esse banco: Testcontainers cria PostgreSQL efêmero por suíte. O
 `docker-compose.test.yml` existe para depuração manual na porta 5433.

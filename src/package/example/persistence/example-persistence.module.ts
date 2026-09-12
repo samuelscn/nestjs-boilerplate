@@ -21,7 +21,7 @@ import { ExampleItemRepository } from "./repository/example-item.repository";
         entities: [ExampleItemEntity],
         migrations: [`${__dirname}/migration/*{.ts,.js}`],
         migrationsTableName: "example_migrations",
-        migrationsRun: config.get("env") === "production",
+        migrationsRun: false,
         synchronize: config.get("env") === "test",
       }),
     }),
