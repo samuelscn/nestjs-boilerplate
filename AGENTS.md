@@ -15,6 +15,9 @@
 - Exemplo completo: `src/package/example/README.md`
 - Rotas de trabalho: `docs/agent-harness/task-routing.md`
 - Verificação: `docs/agent-harness/verification.md`
+- Receitas passo a passo: `.claude/skills/` (new-package, new-endpoint, add-error-code,
+  add-permission, add-feature-flag). Hooks em `.claude/settings.json` bloqueiam
+  edição de `.env*`, lockfile, `contracts/openapi.json` e migrations existentes.
 - Padrões de código: `docs/CODING-PATTERNS.md`
 - Integrações: `docs/integration-patterns.md`
 
