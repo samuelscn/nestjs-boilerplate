@@ -2,7 +2,7 @@ const { PostgreSqlContainer } = require("@testcontainers/postgresql");
 
 module.exports = async () => {
   const container = await new PostgreSqlContainer("postgres:16-alpine")
-    .withDatabase("boilerplate_integration")
+    .withDatabase("app_integration")
     .withUsername("postgres")
     .withPassword("postgres")
     .start();

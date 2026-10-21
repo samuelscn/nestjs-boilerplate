@@ -6,7 +6,7 @@ const defaults = {
   DATABASE_PORT: "5432",
   DATABASE_USERNAME: "postgres",
   DATABASE_PASSWORD: "postgres",
-  DATABASE_NAME: "boilerplate_test",
+  DATABASE_NAME: "app_test",
   IDENTITY_PROVIDER: "fake",
   AUTHORIZATION_MODE: "single",
 };

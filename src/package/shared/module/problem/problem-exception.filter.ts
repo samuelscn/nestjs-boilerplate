@@ -9,6 +9,7 @@ import {
 import type { Request, Response } from "express";
 import { AccessError } from "../authorization";
 import { correlationIdOf } from "../logger/correlation";
+import { captureUnexpected } from "../error-tracking";
 import { DomainError, DomainErrorKind } from "./domain-error";
 import { codeForStatus, ErrorCode, kindStatus } from "./error-code";
 import {
@@ -55,11 +56,13 @@ export class ProblemExceptionFilter implements ExceptionFilter {
     if (response.headersSent) return;
     const traceId = correlationIdOf(request, response);
     const resolved = this.resolve(error);
-    if (resolved.status >= 500)
+    if (resolved.status >= 500) {
       this.logger.error(
         { traceId, path: request.path, errorName: (error as Error)?.name },
         error instanceof Error ? error.stack : undefined,
       );
+      captureUnexpected(error, traceId);
+    }
     const body: ProblemDetails = {
       type: problemType(this.options.typeBase, resolved.code),
       title: problemTitle(resolved.code),

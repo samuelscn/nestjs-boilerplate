@@ -1,3 +1,4 @@
+import "./instrument";
 import { NestFactory } from "@nestjs/core";
 import { getDataSourceToken } from "@nestjs/typeorm";
 import { DataSource } from "typeorm";

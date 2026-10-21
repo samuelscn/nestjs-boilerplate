@@ -199,6 +199,12 @@ Migrations usam uma role separada. O compose fornece roles locais de exemplo;
 produção deve criá-las no gerenciador de segredos. Detalhes de grants, novas
 tabelas e a estratégia de `FORCE` estão em [`docs/authorization.md`](docs/authorization.md).
 
+### Observabilidade
+
+Logs JSON (Pino) com correlation id (`x-correlation-id`, repetido como `traceId` na
+resposta de erro) e rastreamento de erros 5xx no Sentry quando `SENTRY_DSN` existe
+([error-tracking](src/package/shared/module/error-tracking/README.md)).
+
 ### Jobs, auditoria e testes
 
 Jobs e workers não possuem RequestContext automaticamente. Para executar uma

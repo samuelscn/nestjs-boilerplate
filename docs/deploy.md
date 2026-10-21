@@ -34,7 +34,10 @@ falha. Um deploy só recebe tráfego depois que migrations e healthcheck passara
    ambiente; o front que chama esta API usa esse valor como `OIDC_AUDIENCE`.
 5. **GitHub**: secret `RAILWAY_TOKEN` (_production → Settings → Tokens → Project Token_).
    Opcional: proteger o environment `production` com aprovação manual.
-6. **Primeiro OWNER** (modo `single`), depois do primeiro deploy, com o `sub` do usuário no
+6. **Sentry** (recomendado): crie um projeto Node.js no Sentry e use o DSN nos dois
+   ambientes, diferenciados por `SENTRY_ENVIRONMENT`. Ver
+   `src/package/shared/module/error-tracking/README.md`.
+7. **Primeiro OWNER** (modo `single`), depois do primeiro deploy, com o `sub` do usuário no
    Identity:
    ```sh
    railway ssh --service api --environment homolog
@@ -44,18 +47,19 @@ falha. Um deploy só recebe tráfego depois que migrations e healthcheck passara
 
 ## Variáveis por ambiente
 
-| Variável                                                      | Valor                                                                        |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `NODE_ENV`                                                    | `production` (também em homolog: é a imagem de produção)                     |
-| `DATABASE_HOST` / `DATABASE_PORT` / `DATABASE_NAME`           | `${{Postgres.PGHOST}}` / `${{Postgres.PGPORT}}` / `${{Postgres.PGDATABASE}}` |
-| `DATABASE_USERNAME` / `DATABASE_PASSWORD`                     | `ginga_app` / senha definida no provisionamento                              |
-| `MIGRATION_DATABASE_USERNAME` / `MIGRATION_DATABASE_PASSWORD` | `ginga_migrator` / senha definida no provisionamento                         |
-| `AUTHORIZATION_MODE`                                          | `single` ou `tenant`, decidido antes do primeiro deploy (não troca depois)   |
-| `IDENTITY_PROVIDER`                                           | `oidc`                                                                       |
-| `OIDC_ISSUER`                                                 | `https://<identity do ambiente>/api/auth`                                    |
-| `OIDC_AUDIENCE`                                               | domínio desta API (o mesmo cadastrado em `OAUTH_RESOURCES`)                  |
-| `LOG_LEVEL`                                                   | `info`                                                                       |
-| `PROBLEM_TYPE_BASE` / `FEATURE_FLAGS`                         | opcionais                                                                    |
+| Variável                                                      | Valor                                                                                      |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `NODE_ENV`                                                    | `production` (também em homolog: é a imagem de produção)                                   |
+| `DATABASE_HOST` / `DATABASE_PORT` / `DATABASE_NAME`           | `${{Postgres.PGHOST}}` / `${{Postgres.PGPORT}}` / `${{Postgres.PGDATABASE}}`               |
+| `DATABASE_USERNAME` / `DATABASE_PASSWORD`                     | `ginga_app` / senha definida no provisionamento                                            |
+| `MIGRATION_DATABASE_USERNAME` / `MIGRATION_DATABASE_PASSWORD` | `ginga_migrator` / senha definida no provisionamento                                       |
+| `AUTHORIZATION_MODE`                                          | `single` ou `tenant`, decidido antes do primeiro deploy (não troca depois)                 |
+| `IDENTITY_PROVIDER`                                           | `oidc`                                                                                     |
+| `OIDC_ISSUER`                                                 | `https://<identity do ambiente>/api/auth`                                                  |
+| `OIDC_AUDIENCE`                                               | domínio desta API (o mesmo cadastrado em `OAUTH_RESOURCES`)                                |
+| `LOG_LEVEL`                                                   | `info`                                                                                     |
+| `SENTRY_DSN` / `SENTRY_ENVIRONMENT`                           | DSN do projeto Sentry da API / `homolog` ou `production` (sem DSN, rastreamento desligado) |
+| `PROBLEM_TYPE_BASE` / `FEATURE_FLAGS`                         | opcionais                                                                                  |
 
 `PORT` é injetada pelo Railway e usada quando `APP_PORT` não está definida.
 
