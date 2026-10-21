@@ -166,6 +166,12 @@ com AND; o método não enfraquece a classe. Use um decorator de permissions por
 use ALL/ANY para combinar várias permissions. Não existe decorator público de bypass.
 A única exceção interna é o signup explícito de tenant, que exige identidade validada.
 
+`@RequireMembership()` libera um handler para qualquer membro do escopo, sem
+permission específica, dentro da mesma transação/lock de `runAuthorized`. Use
+somente para leituras sobre o próprio chamador (como `GET /access/me`); dados de
+outros usuários sempre exigem permission. No modo simples, uma identidade
+autenticada sem assignments é membro com zero permissions.
+
 O `AuthorizationService` centraliza `can`, `hasPermission`, `hasAnyPermission`,
 `hasAllPermissions` e `require`. O guard não reimplementa avaliação. Os serviços de
 gerenciamento também verificam suas permissions, inclusive quando chamados fora de HTTP.
@@ -215,6 +221,8 @@ operações encadeadas. Não há cache de permissions nem janela de invalidaçã
 | Endpoint                                         | Permission / regra                                       |
 | ------------------------------------------------ | -------------------------------------------------------- |
 | `POST /tenants`                                  | identidade autenticada; somente composição tenant        |
+| `GET /access/me`                                 | membro; permissions efetivas do chamador (para a UI)     |
+| `GET /access/permissions`                        | `role:read`; catálogo agrupado por recurso               |
 | `GET /access/roles`                              | `role:read`                                              |
 | `POST /access/roles`                             | `role:create`                                            |
 | `PUT /access/roles/:id`                          | `role:update`; substitui dados e conjunto de permissions |

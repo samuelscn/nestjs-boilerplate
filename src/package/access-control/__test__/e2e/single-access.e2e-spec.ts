@@ -46,6 +46,44 @@ describe("Single-mode HTTP composition", () => {
       .set("Authorization", "Bearer fake-token-admin")
       .expect(200);
   });
+  it("exposes the caller's own access and the permission catalog", async () => {
+    const me = await request(server)
+      .get("/access/me")
+      .set("Authorization", "Bearer fake-token-admin")
+      .expect(200);
+    expect(me.body).toEqual({
+      userId: "usr_fake_admin",
+      roleIds: expect.any(Array),
+      permissions: expect.arrayContaining(["member:read", "role:assign"]),
+    });
+    // Single mode: an authenticated identity without assignments has no permissions.
+    await request(server)
+      .get("/access/me")
+      .set("Authorization", "Bearer fake-token-stranger")
+      .expect(200, {
+        userId: "usr_fake_stranger",
+        roleIds: [],
+        permissions: [],
+      });
+    await request(server).get("/access/me").expect(401);
+    const catalog = await request(server)
+      .get("/access/permissions")
+      .set("Authorization", "Bearer fake-token-admin")
+      .expect(200);
+    expect(catalog.body.groups).toContainEqual({
+      resource: "member",
+      permissions: [
+        "member:read",
+        "member:invite",
+        "member:update",
+        "member:remove",
+      ],
+    });
+    await request(server)
+      .get("/access/permissions")
+      .set("Authorization", "Bearer fake-token-user-a")
+      .expect(403);
+  });
   it("refuses tenant headers and does not register tenant signup", async () => {
     await request(server)
       .get("/access/roles")

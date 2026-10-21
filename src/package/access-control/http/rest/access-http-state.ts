@@ -13,6 +13,7 @@ export class AccessHttpState {
       context: RequestContext;
       requirements: PermissionRequirement[];
       signup: boolean;
+      membership?: boolean;
     }
   >();
   set(
@@ -21,6 +22,7 @@ export class AccessHttpState {
       context: RequestContext;
       requirements: PermissionRequirement[];
       signup: boolean;
+      membership?: boolean;
     },
   ): void {
     this.requests.set(request, value);

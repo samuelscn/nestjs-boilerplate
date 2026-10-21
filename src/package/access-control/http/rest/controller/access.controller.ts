@@ -18,13 +18,35 @@ import {
 import { Permission } from "src/package/shared/module/authorization";
 import { AccessService } from "../../../core/service/access.service";
 import { MemberDto, RoleDto } from "../dto/access.dto";
-import { MemberResponseDto, RoleResponseDto } from "../dto/access-response.dto";
-import { RequirePermission } from "../permission.decorator";
+import {
+  MemberResponseDto,
+  MyAccessResponseDto,
+  PermissionCatalogResponseDto,
+  RoleResponseDto,
+} from "../dto/access-response.dto";
+import { RequireMembership, RequirePermission } from "../permission.decorator";
 
 @ApiTags("access")
 @Controller("access")
 export class AccessController {
   constructor(private readonly access: AccessService) {}
+  @Get("me")
+  @RequireMembership()
+  @ApiOkResponse({ type: MyAccessResponseDto })
+  me(): MyAccessResponseDto {
+    const access = this.access.myAccess();
+    return {
+      userId: access.userId,
+      roleIds: [...access.roleIds],
+      permissions: [...access.permissions],
+    };
+  }
+  @Get("permissions")
+  @RequirePermission(Permission.role.read)
+  @ApiOkResponse({ type: PermissionCatalogResponseDto })
+  permissions(): PermissionCatalogResponseDto {
+    return PermissionCatalogResponseDto.fromCatalog(Permission);
+  }
   @Get("roles")
   @ApiOkResponse({ type: [RoleResponseDto] })
   @RequirePermission(Permission.role.read)

@@ -62,6 +62,34 @@ export class AccessService {
     });
   }
 
+  /** Same transaction/lock as runAuthorized, for membership-only operations. */
+  async runAsMember<T>(
+    identity: Identity,
+    scope: string | undefined,
+    work: () => Promise<T>,
+  ): Promise<T> {
+    this.validateScope(scope);
+    return this.store.transaction(scope, async () => {
+      const context = await this.store.loadContext(identity);
+      if (!context) throw new AccessError("forbidden");
+      return this.contexts.run(context, work);
+    });
+  }
+
+  /** Effective access of the caller: what the UI may offer. The API still authorizes every call. */
+  myAccess(): {
+    userId: string;
+    roleIds: readonly string[];
+    permissions: readonly Permission[];
+  } {
+    const { identity, authorization } = this.contexts.current();
+    return {
+      userId: identity.userId,
+      roleIds: authorization.roleIds,
+      permissions: authorization.permissions,
+    };
+  }
+
   private validateScope(scope?: string): void {
     if ((this.mode === "tenant") !== !!scope)
       throw new AccessError("forbidden");

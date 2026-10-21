@@ -16,7 +16,11 @@ import { AccessService } from "../../core/service/access.service";
 import { AccessHttpState } from "./access-http-state";
 import { IdentityProvider } from "../../core/contract/identity-provider";
 import { bearerIdentityCredentials } from "./bearer-identity-credentials";
-import { IDENTITY_ONLY, PERMISSION_REQUIREMENT } from "./permission.decorator";
+import {
+  IDENTITY_ONLY,
+  MEMBERSHIP_ONLY,
+  PERMISSION_REQUIREMENT,
+} from "./permission.decorator";
 import { TenantResolver } from "./tenant-resolver";
 
 @Injectable()
@@ -65,7 +69,11 @@ export class PermissionGuard implements CanActivate {
       });
       return true;
     }
-    if (!requirements.length || signup) throw new ForbiddenException();
+    const membership =
+      this.reflector.get<boolean>(MEMBERSHIP_ONLY, execution.getHandler()) ===
+      true;
+    if (signup || (!requirements.length && !membership))
+      throw new ForbiddenException();
     if (
       this.access.mode === "single" &&
       request.headers["x-tenant-id"] !== undefined
@@ -81,7 +89,12 @@ export class PermissionGuard implements CanActivate {
         )
       )
         throw new ForbiddenException();
-      this.state.set(request, { context, requirements, signup: false });
+      this.state.set(request, {
+        context,
+        requirements,
+        signup: false,
+        membership: membership && !requirements.length,
+      });
       return true;
     } catch (error) {
       if (error instanceof AccessError) throw new ForbiddenException();

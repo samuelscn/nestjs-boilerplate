@@ -5,6 +5,7 @@ export {
   RequirePermission,
   RequireAllPermissions,
   RequireAnyPermission,
+  RequireMembership,
 } from "./http/rest/permission.decorator";
 export {
   IdentityProvider,

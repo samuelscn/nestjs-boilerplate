@@ -29,14 +29,19 @@ export class AccessInterceptor implements NestInterceptor {
     return defer(() => {
       const work = () =>
         lastValueFrom(next.handle(), { defaultValue: undefined });
-      return state.signup
-        ? this.contexts.run(state.context, work)
-        : this.access.runAuthorized(
-            state.context.identity,
-            state.context.tenant?.id,
-            state.requirements,
-            work,
-          );
+      if (state.signup) return this.contexts.run(state.context, work);
+      if (state.membership)
+        return this.access.runAsMember(
+          state.context.identity,
+          state.context.tenant?.id,
+          work,
+        );
+      return this.access.runAuthorized(
+        state.context.identity,
+        state.context.tenant?.id,
+        state.requirements,
+        work,
+      );
     });
   }
 }
