@@ -742,11 +742,7 @@
             "schema": {
               "minimum": 1,
               "default": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -757,11 +753,7 @@
               "minimum": 1,
               "maximum": 100,
               "default": 10,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           }
         ],
@@ -2005,10 +1997,6 @@
           "active",
           "suspended"
         ]
-      },
-      "Object": {
-        "type": "object",
-        "properties": {}
       },
       "MemberResponseDto": {
         "type": "object",

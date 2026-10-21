@@ -93,17 +93,17 @@ export class MemberQueryDto {
   @IsArray()
   @IsIn(MEMBER_STATUSES, { each: true })
   status: MemberStatus[] = [];
-  @ApiPropertyOptional({ minimum: 1, default: 1 })
+  @ApiPropertyOptional({ type: Number, minimum: 1, default: 1 })
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  page = 1;
-  @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 10 })
+  page: number = 1;
+  @ApiPropertyOptional({ type: Number, minimum: 1, maximum: 100, default: 10 })
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)
-  pageSize = 10;
+  pageSize: number = 10;
 }
 
 export class InvitationDto {
