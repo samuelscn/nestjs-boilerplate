@@ -1,9 +1,11 @@
 name: Continuous Integration
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
-      - development
       - main
     types: [opened, synchronize, reopened, ready_for_review]
   schedule:

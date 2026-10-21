@@ -16,8 +16,9 @@
 - Rotas de trabalho: `docs/agent-harness/task-routing.md`
 - Verificação: `docs/agent-harness/verification.md`
 - Receitas passo a passo: `.claude/skills/` (new-package, new-endpoint, add-error-code,
-  add-permission, add-feature-flag). Hooks em `.claude/settings.json` bloqueiam
+  add-permission, add-feature-flag, story-workflow). Hooks em `.claude/settings.json` bloqueiam
   edição de `.env*`, lockfile, `contracts/openapi.json` e migrations existentes.
+- Fluxo de história (Linear, branch, PR): skill `story-workflow`, setup em `docs/workflow.md`
 - Padrões de código: `docs/CODING-PATTERNS.md`
 - Integrações: `docs/integration-patterns.md`
 
