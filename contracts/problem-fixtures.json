@@ -1,0 +1,189 @@
+{
+  "$comment": "Published error contract (RFC 9457 + Ginga extensions). Verified by src/package/shared/module/problem/__test__/problem.e2e-spec.ts and consumed by frontend contract tests. traceId and timestamp are placeholders.",
+  "cases": {
+    "validation": {
+      "request": {
+        "method": "POST",
+        "path": "/probe/validation",
+        "body": { "email": "not-an-email", "age": 16, "extra": true }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "type": "urn:ginga:problem:validation-error",
+          "title": "Validation Error",
+          "status": 400,
+          "instance": "/probe/validation",
+          "code": "VALIDATION_ERROR",
+          "errors": [
+            { "field": "extra", "code": "UNKNOWN_FIELD" },
+            { "field": "name", "code": "IS_NOT_EMPTY" },
+            { "field": "name", "code": "IS_STRING" },
+            { "field": "email", "code": "IS_EMAIL" },
+            { "field": "age", "code": "MIN", "params": { "min": 18 } }
+          ],
+          "traceId": "<traceId>",
+          "timestamp": "<timestamp>"
+        }
+      }
+    },
+    "malformedJson": {
+      "request": {
+        "method": "POST",
+        "path": "/probe/validation",
+        "rawBody": "{\"name\":"
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "type": "urn:ginga:problem:validation-error",
+          "title": "Validation Error",
+          "status": 400,
+          "instance": "/probe/validation",
+          "code": "VALIDATION_ERROR",
+          "traceId": "<traceId>",
+          "timestamp": "<timestamp>"
+        }
+      }
+    },
+    "unauthenticated": {
+      "request": { "method": "GET", "path": "/probe/unauthenticated" },
+      "response": {
+        "status": 401,
+        "headers": { "WWW-Authenticate": "Bearer" },
+        "body": {
+          "type": "urn:ginga:problem:authentication-required",
+          "title": "Authentication Required",
+          "status": 401,
+          "instance": "/probe/unauthenticated",
+          "code": "AUTHENTICATION_REQUIRED",
+          "traceId": "<traceId>",
+          "timestamp": "<timestamp>"
+        }
+      }
+    },
+    "forbidden": {
+      "request": { "method": "GET", "path": "/probe/forbidden" },
+      "response": {
+        "status": 403,
+        "body": {
+          "type": "urn:ginga:problem:authorization-forbidden",
+          "title": "Authorization Forbidden",
+          "status": 403,
+          "instance": "/probe/forbidden",
+          "code": "AUTHORIZATION_FORBIDDEN",
+          "traceId": "<traceId>",
+          "timestamp": "<timestamp>"
+        }
+      }
+    },
+    "notFound": {
+      "request": { "method": "GET", "path": "/probe/not-found" },
+      "response": {
+        "status": 404,
+        "body": {
+          "type": "urn:ginga:problem:resource-not-found",
+          "title": "Resource Not Found",
+          "status": 404,
+          "instance": "/probe/not-found",
+          "code": "RESOURCE_NOT_FOUND",
+          "traceId": "<traceId>",
+          "timestamp": "<timestamp>"
+        }
+      }
+    },
+    "unknownRoute": {
+      "request": { "method": "GET", "path": "/does-not-exist" },
+      "response": {
+        "status": 404,
+        "body": {
+          "type": "urn:ginga:problem:resource-not-found",
+          "title": "Resource Not Found",
+          "status": 404,
+          "instance": "/does-not-exist",
+          "code": "RESOURCE_NOT_FOUND",
+          "traceId": "<traceId>",
+          "timestamp": "<timestamp>"
+        }
+      }
+    },
+    "conflict": {
+      "request": { "method": "GET", "path": "/probe/conflict" },
+      "response": {
+        "status": 409,
+        "body": {
+          "type": "urn:ginga:problem:last-owner-required",
+          "title": "Last Owner Required",
+          "status": 409,
+          "instance": "/probe/conflict",
+          "code": "LAST_OWNER_REQUIRED",
+          "traceId": "<traceId>",
+          "timestamp": "<timestamp>"
+        }
+      }
+    },
+    "domainRule": {
+      "request": { "method": "GET", "path": "/probe/rule" },
+      "response": {
+        "status": 422,
+        "body": {
+          "type": "urn:ginga:problem:category-full",
+          "title": "Category Full",
+          "status": 422,
+          "detail": "The category has reached its capacity.",
+          "instance": "/probe/rule",
+          "code": "CATEGORY_FULL",
+          "params": { "maxParticipants": 32 },
+          "traceId": "<traceId>",
+          "timestamp": "<timestamp>"
+        }
+      }
+    },
+    "rateLimit": {
+      "request": { "method": "GET", "path": "/probe/rate-limit" },
+      "response": {
+        "status": 429,
+        "headers": { "Retry-After": "30" },
+        "body": {
+          "type": "urn:ginga:problem:rate-limit-exceeded",
+          "title": "Rate Limit Exceeded",
+          "status": 429,
+          "instance": "/probe/rate-limit",
+          "code": "RATE_LIMIT_EXCEEDED",
+          "traceId": "<traceId>",
+          "timestamp": "<timestamp>"
+        }
+      }
+    },
+    "internalError": {
+      "request": { "method": "GET", "path": "/probe/crash" },
+      "response": {
+        "status": 500,
+        "body": {
+          "type": "urn:ginga:problem:internal-server-error",
+          "title": "Internal Server Error",
+          "status": 500,
+          "instance": "/probe/crash",
+          "code": "INTERNAL_SERVER_ERROR",
+          "traceId": "<traceId>",
+          "timestamp": "<timestamp>"
+        }
+      }
+    },
+    "serviceUnavailable": {
+      "request": { "method": "GET", "path": "/probe/domain-crash" },
+      "response": {
+        "status": 503,
+        "body": {
+          "type": "urn:ginga:problem:service-unavailable",
+          "title": "Service Unavailable",
+          "status": 503,
+          "instance": "/probe/domain-crash",
+          "code": "SERVICE_UNAVAILABLE",
+          "traceId": "<traceId>",
+          "timestamp": "<timestamp>"
+        }
+      }
+    }
+  }
+}

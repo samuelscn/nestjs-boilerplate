@@ -12,8 +12,15 @@ Gere a migration, revise SQL e rode integração.
 
 ## Controller ou contrato HTTP
 
-Leia o README do pacote e `jest/README.md`. Valide DTOs, mantenha o controller
-fino e cubra sucesso mais uma falha relevante em E2E.
+Leia o README do pacote, `jest/README.md` e o README de
+`shared/module/problem`. Valide DTOs, mantenha o controller fino e cubra sucesso
+mais uma falha relevante em E2E, verificando `status` e `code` do problem.
+
+## Erro novo
+
+Use `DomainError` com o `kind` adequado. Código específico só quando o cliente
+precisa distinguir a condição; declare no `core/model` do pacote. Cubra em E2E e
+avise que o frontend precisa da tradução do código.
 
 ## Integração externa ou logs
 

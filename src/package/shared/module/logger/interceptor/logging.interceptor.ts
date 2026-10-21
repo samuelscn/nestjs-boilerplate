@@ -7,7 +7,7 @@ import {
 import { Observable } from "rxjs";
 import { tap } from "rxjs/operators";
 import { Request, Response } from "express";
-import { randomUUID } from "node:crypto";
+import { correlationIdOf } from "../correlation";
 import { AppLogger } from "../service/app-logger.service";
 
 // Normalize spelling variants such as accessToken, access_token and Access-Token.
@@ -50,13 +50,7 @@ export class LoggingInterceptor implements NestInterceptor {
     const response = ctx.getResponse<Response>();
 
     const { method, path: originalUrl, body, query, params } = request;
-    const receivedCorrelationId = request.headers["x-correlation-id"];
-    const correlationId =
-      typeof receivedCorrelationId === "string" &&
-      /^[a-f0-9-]{36}$/i.test(receivedCorrelationId)
-        ? receivedCorrelationId
-        : randomUUID();
-    response.setHeader("x-correlation-id", correlationId);
+    const correlationId = correlationIdOf(request, response);
 
     const startTime = Date.now();
     const logContext = "HTTP";
@@ -96,7 +90,7 @@ export class LoggingInterceptor implements NestInterceptor {
         },
         error: (error: unknown) => {
           const duration = Date.now() - startTime;
-          // O erro será logado pelo GlobalExceptionFilter
+          // O erro é registrado pelo ProblemExceptionFilter
           // Aqui apenas registramos a métrica de tempo
           this.logger.debug(
             `[RESPONSE_ERROR] ${method} ${originalUrl} - ${duration}ms`,

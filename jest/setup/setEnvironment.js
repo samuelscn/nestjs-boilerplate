@@ -7,6 +7,8 @@ const defaults = {
   DATABASE_USERNAME: "postgres",
   DATABASE_PASSWORD: "postgres",
   DATABASE_NAME: "boilerplate_test",
+  IDENTITY_PROVIDER: "fake",
+  AUTHORIZATION_MODE: "single",
 };
 
 process.env = { ...defaults, ...process.env };

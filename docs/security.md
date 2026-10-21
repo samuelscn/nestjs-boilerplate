@@ -15,10 +15,10 @@
 | Discovery adulterado                     | HTTPS em produção, issuer exato, URL validada e redirects recusados      |
 | Fake em produção                         | Validação de configuração, factory e construtor do fake recusam produção |
 
-Todas as falhas de autenticação retornam o mesmo envelope: status 401,
-`code: AUTHENTICATION_REQUIRED`, `message: Authentication is required.`,
-`requestId`, timestamp ISO e path sem query string. O filtro adiciona
-`WWW-Authenticate: Bearer` e `x-request-id`. Causas internas não são serializadas.
+Todas as falhas de autenticação retornam o mesmo Problem Details (RFC 9457):
+status 401, `code: AUTHENTICATION_REQUIRED`, `traceId`, timestamp ISO e
+`instance` sem query string. O filtro adiciona `WWW-Authenticate: Bearer` e o
+`x-correlation-id` igual ao `traceId`. Causas internas não são serializadas.
 
 JWTs nunca devem ser logados. Também não registre Authorization, refresh tokens,
 client secrets ou cookies. O provider não registra tokens nem exceções do jose.

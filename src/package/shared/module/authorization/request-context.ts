@@ -40,6 +40,8 @@ export class RequestContexts {
 export class AccessError extends Error {
   constructor(
     readonly code: "forbidden" | "invalid" | "not_found" | "conflict",
+    /** Specific public problem code; defaults to the generic code of the category. */
+    readonly problemCode?: string,
   ) {
     super(code);
   }

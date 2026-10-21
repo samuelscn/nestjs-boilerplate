@@ -45,8 +45,12 @@ segredos diretamente em regras de negócio.
 
 ## Erros e transações
 
-Erros de domínio não devem depender de classes HTTP. A camada HTTP traduz o
-erro quando necessário. Delimite a transação no service quando uma operação
+Erros de domínio não devem depender de classes HTTP. Services lançam
+`DomainError(kind, code, { params })` e o `ProblemExceptionFilter` responde em
+RFC 9457 (`application/problem+json`) com `code` estável, `params`, `errors[]` e
+`traceId`. Clientes decidem e traduzem por `code`, nunca por texto. Não crie
+filtros por pacote nem registre outro `ValidationPipe`. Detalhes em
+[problem](../src/package/shared/module/problem/README.md). Delimite a transação no service quando uma operação
 precisar de atomicidade e mantenha todas as escritas no mesmo DataSource.
 
 ## Imports entre pacotes

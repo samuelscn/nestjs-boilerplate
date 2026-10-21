@@ -15,6 +15,7 @@ import {
   Member,
   Role,
   RoleInput,
+  AccessProblem,
   SYSTEM_ROLES,
   TenantInput,
 } from "../model/access.model";
@@ -104,7 +105,8 @@ export class AccessService {
     return this.execute(Permission.role.update, async (context) => {
       const role = await this.requireRole(id);
       this.manageable(role, context);
-      if (role.isSystem) throw new AccessError("conflict");
+      if (role.isSystem)
+        throw new AccessError("conflict", AccessProblem.SYSTEM_ROLE_IMMUTABLE);
       this.validateRole(input, context);
       const updated = await this.store.saveRole(input, false, id);
       await this.store.audit("role.updated", context.identity.userId, id);
@@ -121,7 +123,8 @@ export class AccessService {
     return this.execute(Permission.role.delete, async (context) => {
       const role = await this.requireRole(id);
       this.manageable(role, context);
-      if (role.isSystem) throw new AccessError("conflict");
+      if (role.isSystem)
+        throw new AccessError("conflict", AccessProblem.SYSTEM_ROLE_IMMUTABLE);
       await this.store.deleteRole(id);
       await this.store.audit("role.deleted", context.identity.userId, id);
     });
@@ -150,7 +153,7 @@ export class AccessService {
           member.roleIds.includes(roleId) &&
           (await this.store.countOwners()) <= 1
         )
-          throw new AccessError("conflict");
+          throw new AccessError("conflict", AccessProblem.LAST_OWNER_REQUIRED);
       }
       if (assign) await this.store.assignRole(memberId, roleId);
       else await this.store.unassignRole(memberId, roleId);
@@ -187,7 +190,10 @@ export class AccessService {
           if (!context.authorization.roleIds.includes(role.id))
             throw new AccessError("forbidden");
           if ((await this.store.countOwners()) <= 1)
-            throw new AccessError("conflict");
+            throw new AccessError(
+              "conflict",
+              AccessProblem.LAST_OWNER_REQUIRED,
+            );
         }
       }
       await this.store.deleteMember(id);

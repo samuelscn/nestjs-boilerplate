@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ConfigException } from "src/package/shared/module/config";
+import { DEFAULT_PROBLEM_TYPE_BASE } from "src/package/shared/module/problem/problem-details";
 import { SharedConfig } from "src/package/shared/module/config/util/shared.config";
 
 export const oidcUrlSchema = z.url().refine((value) => {
@@ -27,6 +28,12 @@ const appConfigSchema = z.object({
       audience: z.string().trim().min(1),
     }),
   ]),
+  problem: z.object({
+    typeBase: z
+      .string()
+      .regex(/^(https:\/\/[^\s?#]+\/|urn:[a-z0-9-]+:[^\s?#]*:)$/i)
+      .default(DEFAULT_PROBLEM_TYPE_BASE),
+  }),
   authorization: z.object({
     mode: z.enum(["single", "tenant"]).default("single"),
   }),
@@ -50,6 +57,7 @@ export const appConfigFactory = (): AppConfig => {
       issuer: process.env.OIDC_ISSUER,
       audience: process.env.OIDC_AUDIENCE,
     },
+    problem: { typeBase: process.env.PROBLEM_TYPE_BASE },
     authorization: { mode: process.env.AUTHORIZATION_MODE },
     database: {
       host: process.env.DATABASE_HOST,

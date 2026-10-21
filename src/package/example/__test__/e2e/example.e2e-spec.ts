@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe } from "@nestjs/common";
+import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { getDataSourceToken } from "@nestjs/typeorm";
 import { DataSource } from "typeorm";
@@ -22,9 +22,6 @@ describe("Example HTTP API", () => {
       .useValue(security.source)
       .compile();
     app = moduleRef.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
-    );
     await app.init();
     dataSource = app.get(getDataSourceToken("example"));
   });

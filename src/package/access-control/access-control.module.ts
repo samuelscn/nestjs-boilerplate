@@ -5,7 +5,7 @@ import {
   ModuleMetadata,
   Type,
 } from "@nestjs/common";
-import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { getDataSourceToken } from "@nestjs/typeorm";
 import { DataSource } from "typeorm";
 import { ApplicationConfig } from "src/config";
@@ -19,14 +19,12 @@ import { TypeOrmPersistenceModule } from "src/package/shared/module/typeorm";
 import { AccessStore } from "./core/contract/access-store";
 import { AccessMode } from "./core/model/access.model";
 import { AccessService } from "./core/service/access.service";
-import { AccessErrorFilter } from "./http/rest/access-error.filter";
 import { AccessHttpState } from "./http/rest/access-http-state";
 import { AccessInterceptor } from "./http/rest/access.interceptor";
 import { AccessController } from "./http/rest/controller/access.controller";
 import { TenantController } from "./http/rest/controller/tenant.controller";
 import { IdentityProvider } from "./core/contract/identity-provider";
 import { createIdentityProvider } from "./core/identity/identity-provider.factory";
-import { AuthenticationErrorFilter } from "./http/rest/authentication-error.filter";
 import { PermissionGuard } from "./http/rest/permission.guard";
 import {
   HeaderTenantResolver,
@@ -108,8 +106,6 @@ export class AccessControlModule {
         },
         { provide: APP_GUARD, useClass: PermissionGuard },
         { provide: APP_INTERCEPTOR, useClass: AccessInterceptor },
-        { provide: APP_FILTER, useClass: AccessErrorFilter },
-        { provide: APP_FILTER, useClass: AuthenticationErrorFilter },
       ],
       exports: [
         AccessService,

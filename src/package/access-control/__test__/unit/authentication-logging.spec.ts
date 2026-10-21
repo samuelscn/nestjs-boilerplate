@@ -57,7 +57,11 @@ describe("Authentication logging", () => {
           params,
           get: () => "test-client/1.0",
         }),
-        getResponse: () => ({ statusCode: 200, setHeader: jest.fn() }),
+        getResponse: () => ({
+          statusCode: 200,
+          setHeader: jest.fn(),
+          getHeader: jest.fn(),
+        }),
       }),
     } as unknown as ExecutionContext;
 
@@ -99,7 +103,11 @@ describe("Authentication logging", () => {
     const secret = "eyJhbGciOiJSUzI1NiJ9.secret.signature";
     const logger = { log: jest.fn(), debug: jest.fn() };
     const interceptor = new LoggingInterceptor(logger as unknown as AppLogger);
-    const response = { statusCode: 200, setHeader: jest.fn() };
+    const response = {
+      statusCode: 200,
+      setHeader: jest.fn(),
+      getHeader: jest.fn(),
+    };
     const context = {
       switchToHttp: () => ({
         getRequest: () => ({

@@ -25,6 +25,9 @@
 - Service não conhece HTTP nem detalhes do TypeORM.
 - Repository encapsula queries e pertence ao pacote que possui os dados.
 - Valide DTOs na fronteira; não registre segredos ou PII.
+- Erros seguem RFC 9457 via `shared/module/problem`: lance `DomainError` com
+  `code` estável; nunca responda erro manualmente nem crie filtros por pacote.
+  Códigos publicados não mudam.
 - Cada pacote e cada módulo compartilhado deve possuir `README.md`.
 - Gere migrations com o script do projeto; não escreva SQL manual quando houver gerador.
 - Não adicione dependência ou abstração sem necessidade demonstrada.

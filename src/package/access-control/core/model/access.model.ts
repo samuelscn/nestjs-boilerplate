@@ -45,3 +45,11 @@ export type AuditEvent =
   | "role.assigned"
   | "role.unassigned"
   | "role.permissions.updated";
+
+/** Public problem codes specific to access control. Published codes are never renamed. */
+export const AccessProblem = {
+  /** System roles (e.g. owner) cannot be edited or deleted. */
+  SYSTEM_ROLE_IMMUTABLE: "SYSTEM_ROLE_IMMUTABLE",
+  /** The operation would leave the scope without an owner. */
+  LAST_OWNER_REQUIRED: "LAST_OWNER_REQUIRED",
+} as const;

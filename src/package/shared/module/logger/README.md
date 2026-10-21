@@ -3,7 +3,9 @@
 Configura `nestjs-pino`, disponibiliza `AppLogger` e registra metadados em JSON.
 Em desenvolvimento, `pino-pretty` melhora leitura; produção mantém JSON.
 
-`LoggingInterceptor` cria/propaga correlation ID, registra método, rota, status e
+`LoggingInterceptor` usa `correlationIdOf` (compartilhado com o filtro de erros,
+que roda também quando um guard falha antes do interceptor) para criar/propagar
+o correlation ID, registra método, rota, status e
 duração, além de query, params, body e user-agent sanitizados. A URL registrada
 não inclui query string. A sanitização é recursiva, preserva o payload original e
 oculta campos sensíveis em camelCase, snake_case e kebab-case, além de JWTs

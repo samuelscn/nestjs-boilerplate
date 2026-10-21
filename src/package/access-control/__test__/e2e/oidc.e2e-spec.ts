@@ -9,6 +9,7 @@ import {
   Permission,
   RequestContexts,
 } from "src/package/shared/module/authorization";
+import { ProblemModule } from "src/package/shared/module/problem";
 import { AccessControlModule } from "../../access-control.module";
 import { RequirePermission } from "../../http/rest/permission.decorator";
 import { oidcServer } from "../support/oidc-server";
@@ -48,6 +49,7 @@ describe("OIDC HTTP resource server", () => {
             }),
           ],
         }),
+        ProblemModule.forRoot(),
         AccessControlModule.forRoot("single"),
       ],
       controllers: [IdentityTestController],
@@ -85,19 +87,23 @@ describe("OIDC HTTP resource server", () => {
     "Bearer ",
     "Bearer malformed",
     "Bearer a.b.c",
-  ])("uses official 401 envelope for header %s", async (authorization) => {
+  ])("uses the problem contract for header %s", async (authorization) => {
     const call = request(server).get("/auth-test/me");
     if (authorization !== undefined) call.set("Authorization", authorization);
     const response = await call.expect(401);
+    expect(response.headers["content-type"]).toMatch(
+      /^application\/problem\+json/,
+    );
     expect(response.body).toEqual({
-      statusCode: 401,
+      type: "urn:ginga:problem:authentication-required",
+      title: "Authentication Required",
+      status: 401,
+      instance: "/auth-test/me",
       code: "AUTHENTICATION_REQUIRED",
-      message: "Authentication is required.",
-      requestId: expect.any(String),
+      traceId: expect.any(String),
       timestamp: expect.any(String),
-      path: "/auth-test/me",
     });
-    expect(response.headers["x-request-id"]).toBe(response.body.requestId);
+    expect(response.headers["x-correlation-id"]).toBe(response.body.traceId);
     expect(response.headers["www-authenticate"]).toBe("Bearer");
   });
 
@@ -129,7 +135,6 @@ describe("OIDC HTTP resource server", () => {
         .set("Authorization", `Bearer ${token}`)
         .expect(401);
       expect(response.body.code).toBe("AUTHENTICATION_REQUIRED");
-      expect(response.body.message).toBe("Authentication is required.");
       expect(JSON.stringify(response.body)).not.toContain(token);
     }
   });

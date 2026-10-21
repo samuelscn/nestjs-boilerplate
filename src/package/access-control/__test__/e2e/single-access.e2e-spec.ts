@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe } from "@nestjs/common";
+import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { getDataSourceToken } from "@nestjs/typeorm";
 import { randomUUID } from "node:crypto";
@@ -6,6 +6,7 @@ import { Server } from "node:http";
 import request from "supertest";
 import { appConfigFactory } from "src/config";
 import { ConfigModule } from "src/package/shared/module/config";
+import { ProblemModule } from "src/package/shared/module/problem";
 import { AccessControlModule } from "../../index";
 import { securityDatabase } from "../support/security-database";
 
@@ -19,6 +20,7 @@ describe("Single-mode HTTP composition", () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({ load: [appConfigFactory] }),
+        ProblemModule.forRoot(),
         AccessControlModule.forRoot("single"),
       ],
     })
@@ -26,9 +28,6 @@ describe("Single-mode HTTP composition", () => {
       .useValue(db.source)
       .compile();
     app = moduleRef.createNestApplication({ logger: false });
-    app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
-    );
     await app.init();
     server = app.getHttpServer() as Server;
   });

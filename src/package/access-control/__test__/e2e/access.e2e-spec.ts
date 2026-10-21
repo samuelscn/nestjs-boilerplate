@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  INestApplication,
-  Post,
-  ValidationPipe,
-} from "@nestjs/common";
+import { Controller, Get, INestApplication, Post } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { getDataSourceToken } from "@nestjs/typeorm";
 import { Server } from "node:http";
@@ -12,6 +6,7 @@ import { randomUUID } from "node:crypto";
 import request from "supertest";
 import { appConfigFactory } from "src/config";
 import { ConfigModule } from "src/package/shared/module/config";
+import { ProblemModule } from "src/package/shared/module/problem";
 import {
   Permission,
   RequestContexts,
@@ -103,6 +98,7 @@ describe("Access HTTP boundary (tenant mode)", () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({ load: [appConfigFactory] }),
+        ProblemModule.forRoot(),
         AccessControlModule.forRoot("tenant"),
       ],
       controllers: [ProbeController, CombinedController],
@@ -111,13 +107,6 @@ describe("Access HTTP boundary (tenant mode)", () => {
       .useValue(db.source)
       .compile();
     app = moduleRef.createNestApplication({ logger: false });
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
     await app.init();
     server = app.getHttpServer() as Server;
     const a = await request(server)
