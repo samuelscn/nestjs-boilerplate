@@ -37,6 +37,8 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Lint, architecture, build and unit tests
         run: npm run check
+      - name: Published OpenAPI contract is up to date
+        run: npm run openapi:check
 
   database-tests:
     name: Database tests

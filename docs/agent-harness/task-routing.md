@@ -15,6 +15,7 @@ Gere a migration, revise SQL e rode integração.
 Leia o README do pacote, `jest/README.md` e o README de
 `shared/module/problem`. Valide DTOs, mantenha o controller fino e cubra sucesso
 mais uma falha relevante em E2E, verificando `status` e `code` do problem.
+Atualize os decorators OpenAPI e rode `npm run openapi:export`.
 
 ## Erro novo
 

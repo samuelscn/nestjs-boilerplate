@@ -1,6 +1,8 @@
 import { NestFactory } from "@nestjs/core";
 import { Logger } from "nestjs-pino";
+import { SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
+import { createOpenApiDocument } from "./openapi";
 import { ApplicationConfig } from "./config";
 import { ConfigService } from "./package/shared/module/config";
 import { AppLogger, LoggingInterceptor } from "./package/shared/module/logger";
@@ -10,7 +12,10 @@ async function bootstrap(): Promise<void> {
   app.useLogger(app.get(Logger));
   app.useGlobalInterceptors(app.get(LoggingInterceptor));
 
-  const port = app.get(ConfigService<ApplicationConfig>).get("app.port");
+  const config = app.get(ConfigService<ApplicationConfig>);
+  if (config.get("env") !== "production")
+    SwaggerModule.setup("docs", app, () => createOpenApiDocument(app));
+  const port = config.get("app.port");
   const appLogger = app.get(AppLogger);
   await app.listen(port);
   appLogger.log("Application started", {

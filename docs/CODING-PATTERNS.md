@@ -53,6 +53,21 @@ filtros por pacote nem registre outro `ValidationPipe`. Detalhes em
 [problem](../src/package/shared/module/problem/README.md). Delimite a transação no service quando uma operação
 precisar de atomicidade e mantenha todas as escritas no mesmo DataSource.
 
+## Contrato HTTP (OpenAPI)
+
+`contracts/openapi.json` é o contrato publicado para o frontend, que gera seus
+tipos a partir dele. Documente explicitamente: `@ApiProperty` nos DTOs de entrada
+e saída, `@ApiOkResponse`/`@ApiCreatedResponse({ type })` nos handlers e
+`@ApiTags` no controller. Não retorne entidades nem interfaces do core; mapeie
+para um `*ResponseDto`. Respostas de erro (Problem Details) são adicionadas a
+todas as operações por `src/openapi.ts`, que também publica o enum `ProblemCode`:
+registre ali o catálogo de códigos específicos de um pacote novo.
+
+Depois de mudar controller/DTO, rode `npm run openapi:export` e commite o JSON;
+o CI falha (`openapi:check`) se ele estiver defasado. Fora de produção, a API
+serve a documentação em `/docs`. O plugin CLI do Swagger não é usado: ele gera
+imports quebrados em caminhos com caracteres não ASCII.
+
 ## Imports entre pacotes
 
 Exponha contratos mínimos pelo `index.ts` ou por `public-api/`. Não importe

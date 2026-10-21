@@ -57,7 +57,7 @@ export const appConfigFactory = (): AppConfig => {
       issuer: process.env.OIDC_ISSUER,
       audience: process.env.OIDC_AUDIENCE,
     },
-    problem: { typeBase: process.env.PROBLEM_TYPE_BASE },
+    problem: { typeBase: process.env.PROBLEM_TYPE_BASE || undefined },
     authorization: { mode: process.env.AUTHORIZATION_MODE },
     database: {
       host: process.env.DATABASE_HOST,
