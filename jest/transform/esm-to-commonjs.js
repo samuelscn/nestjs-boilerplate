@@ -1,6 +1,6 @@
 const ts = require("typescript");
 
-// uuid >= 13 is ESM-only. Preserve its real implementation in this CJS Jest suite.
+// uuid and jose are ESM-only. Preserve their real implementations in CJS Jest.
 module.exports = {
   process(sourceText, sourcePath) {
     const result = ts.transpileModule(sourceText, {

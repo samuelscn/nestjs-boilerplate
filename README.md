@@ -63,7 +63,7 @@ PostgreSQL RLS       quais linhas essa transação pode acessar
 Authentication nunca é implementada localmente. A API recebe um Bearer Access
 Token, entrega as credenciais ao `IdentityProvider` e usa somente o resultado
 agnóstico `{ userId }`. O provider fake existe para desenvolvimento e testes;
-o futuro provider OIDC validará assinatura/JWKS, issuer, audience e expiração,
+o provider OIDC valida assinatura/JWKS, issuer, audience, tipo e expiração,
 retornando o claim `sub` como `userId`. Nenhum provider de identidade conhece
 roles, permissions ou tenants.
 
@@ -71,10 +71,32 @@ Em development/test, configure `IDENTITY_PROVIDER=fake` e use um dos tokens
 documentados em [`docs/authorization.md`](docs/authorization.md). O fake aceita
 somente tokens conhecidos, como `fake-token-admin → usr_fake_admin`; ele não
 transforma um valor arbitrário do header em usuário. Em produção, fake é
-recusado no bootstrap. `IDENTITY_PROVIDER=oidc` falha explicitamente até o
-adapter OIDC do Ginga Identity ser instalado, evitando autenticação simulada em
-produção. A implementação pode ser trocada por `forRoot(..., { identity })`
+recusado no bootstrap. `IDENTITY_PROVIDER=oidc` usa `jose` e o discovery do
+Ginga Identity, exigindo `OIDC_ISSUER` e `OIDC_AUDIENCE`.
+A implementação pode ser trocada por `forRoot(..., { identity })`
 sem alterar controllers, services, tenancy ou RBAC.
+
+### Authentication: Resource Server
+
+A API recebe apenas `Authorization: Bearer <access_token>`. Login, senha,
+callback OAuth, troca de code e refresh token pertencem ao Identity/BFF.
+O provider exige RS256, `typ: at+jwt`, `iss`, `aud`, `exp` e `sub`; valida `nbf`
+quando presente. ID Tokens são rejeitados. O Identity autentica; a API autoriza
+com RBAC local, sem usar roles ou scopes do JWT.
+
+Para desenvolvimento isolado, use `IDENTITY_PROVIDER=fake`. Para o Identity local:
+
+```env
+IDENTITY_PROVIDER=oidc
+OIDC_ISSUER=http://localhost:4000/api/auth
+OIDC_AUDIENCE=http://localhost:3000
+```
+
+O BFF precisa solicitar `resource=http://localhost:3000`, recurso cadastrado no
+Identity. Em produção, configure o issuer HTTPS real e a audience própria da API.
+O JWKS é descoberto no bootstrap e suas chaves são buscadas sob demanda, com cache.
+Veja [integração local e operação](docs/authentication.md),
+[arquitetura](docs/authentication-architecture.md) e [segurança](docs/security.md).
 
 ### Os dois modos de geração
 

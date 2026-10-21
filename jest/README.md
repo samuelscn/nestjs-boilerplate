@@ -28,6 +28,11 @@ Os testes usam runtime sem BYPASSRLS/superuser e também verificam FORCE no owne
 Pool de uma conexão cobre vazamento após commit/rollback; concorrência cobre
 ownership, revogação e bootstrap. Veja `access-control/__test__`.
 
-O Jest deste projeto executa CommonJS. `uuid` é ESM-only; um transform restrito a
-esse pacote transpila sua implementação real com TypeScript. Não há mock de UUID,
+O Jest deste projeto executa CommonJS. `uuid` e `jose` são ESM-only; um transform restrito a
+esses pacotes transpila suas implementações reais com TypeScript. Não há mock de criptografia/UUID,
 nem alteração das dependências ou do formato de build da aplicação.
+
+OIDC usa servidor HTTP local de discovery/JWKS e RSA real em integração.
+O teste de rotação avança apenas `Date.now` para atravessar cooldown/TTL sem
+esperar minutos. E2E usa a factory real, guard, RequestContext e RBAC PostgreSQL;
+`/auth-test/me` existe somente nessa fixture.

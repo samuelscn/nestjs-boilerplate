@@ -20,6 +20,14 @@ export const FAKE_IDENTITY_TOKENS: Readonly<
 
 @Injectable()
 export class FakeIdentityProvider extends IdentityProvider {
+  constructor() {
+    super();
+    if (process.env.NODE_ENV === "production")
+      throw new Error(
+        "FakeIdentityProvider is only allowed outside production",
+      );
+  }
+
   authenticate(
     credentials: IdentityCredentials,
   ): Promise<AuthenticatedIdentity | null> {

@@ -7,6 +7,7 @@ type NestPinoLoggerModule = {
   forRoot(options: {
     pinoHttp?: {
       level?: string;
+      serializers?: Record<string, (value: Record<string, unknown>) => unknown>;
       transport?: unknown;
       formatters?: {
         level?: (label: unknown) => { level: unknown };
@@ -28,6 +29,17 @@ const TypedPinoLoggerModule =
     TypedPinoLoggerModule.forRoot({
       pinoHttp: {
         level: process.env.LOG_LEVEL || "info",
+        serializers: {
+          // Never serialize request headers, bodies or query parameters, even on 401.
+          req: (request) => ({
+            id: request.id,
+            method: request.method,
+            url:
+              typeof request.url === "string"
+                ? request.url.split("?")[0]
+                : undefined,
+          }),
+        },
         redact: {
           paths: [
             "req.headers.authorization",

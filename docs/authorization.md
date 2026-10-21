@@ -32,8 +32,8 @@ deve adaptar suas entidades com o padrão descrito abaixo antes de expor endpoin
 
 `IdentityProvider` recebe somente `IdentityCredentials` e retorna
 `AuthenticatedIdentity | null`. O adaptador HTTP extrai um único Bearer token,
-mas não entrega `Request`, JWT ou detalhes de OIDC aos providers, services ou
-controllers. A identidade principal é sempre `userId`.
+entrega o access token ao provider sem expor `Request`; services e controllers
+recebem apenas a identidade validada. A identidade principal é sempre `userId`.
 
 Em desenvolvimento e testes, `IDENTITY_PROVIDER=fake` compõe
 `FakeIdentityProvider`:
@@ -49,28 +49,22 @@ O mapa é fechado: um token como `Bearer usr_attacker` não cria a identidade
 `usr_attacker`. O fake não retorna claims, roles, permissions, membership ou tenant.
 Ele é recusado quando `NODE_ENV=production`.
 
-`IDENTITY_PROVIDER=oidc` seleciona o ponto de composição OIDC e falha no bootstrap
-até que o adapter Ginga Identity seja instalado. Isso evita publicar uma API que
-parece validar tokens sem fazê-lo. A troca não altera guards, controllers, serviços,
+`IDENTITY_PROVIDER=oidc` seleciona `OidcIdentityProvider` através da factory Nest.
+Configure `OIDC_ISSUER` e `OIDC_AUDIENCE`. A troca não altera controllers, serviços,
 tenancy ou RBAC:
 
 ```ts
 AccessControlModule.forRoot("tenant", {
-  identity: GingaOidcIdentityProvider,
-  imports: [GingaIdentityIntegrationModule],
+  identityProvider: "oidc",
 });
 ```
 
-O adapter implementa `IdentityProvider.authenticate(credentials)` e retorna
-`{ userId: string } | null`. Ele deve validar assinatura JWKS, issuer, audience,
-expiração e validade do token antes de retornar `claims.sub` como `userId`.
-`userId` é um identificador externo
-opaco e estável, não um email. Se houver múltiplos issuers, a integração deve produzir
-identificadores sem colisão entre issuers. O pacote não escolhe SDK, endpoints ou
-claims do IdP porque o contrato externo ainda não existe neste repositório.
-`IDENTITY_PROVIDER` somente escolhe a implementação padrão. Um produto pode injetar
-um adapter próprio pelo campo `identity` de `forRoot` enquanto a integração OIDC é
-desenvolvida. Nenhum desses adapters deve receber ou interpretar roles/permissions.
+O adapter valida assinatura RS256 pelo JWKS, issuer único, audience, expiração,
+`nbf` e `typ: at+jwt`, retornando somente `{ userId: claims.sub } | null`.
+`userId` é um identificador externo opaco e estável, não um email.
+Um produto pode injetar um adapter próprio pelo campo `identity` de `forRoot`.
+Nenhum desses adapters deve interpretar roles/permissions.
+Veja [o contrato e a integração local](authentication.md).
 
 ## Permissions em código
 

@@ -10,6 +10,33 @@ import { Request, Response } from "express";
 import { randomUUID } from "node:crypto";
 import { AppLogger } from "../service/app-logger.service";
 
+// Normalize spelling variants such as accessToken, access_token and Access-Token.
+const SENSITIVE_KEYS = new Set([
+  "password",
+  "senha",
+  "token",
+  "authorization",
+  "auth",
+  "jwt",
+  "accesstoken",
+  "refreshtoken",
+  "idtoken",
+  "clientsecret",
+  "secret",
+  "cookie",
+  "setcookie",
+  "sessioncookie",
+  "sessiontoken",
+  "apikey",
+  "identityuserid",
+  "userid",
+  "cpf",
+  "cnpj",
+  "email",
+  "phone",
+  "telefone",
+]);
+
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
   constructor(private readonly logger: AppLogger) {}
@@ -22,12 +49,13 @@ export class LoggingInterceptor implements NestInterceptor {
     const request = ctx.getRequest<Request>();
     const response = ctx.getResponse<Response>();
 
-    const { method, originalUrl, body, query, params } = request;
-    const userAgent = request.get("user-agent") || "";
+    const { method, path: originalUrl, body, query, params } = request;
     const receivedCorrelationId = request.headers["x-correlation-id"];
-    const correlationId = Array.isArray(receivedCorrelationId)
-      ? receivedCorrelationId[0]
-      : (receivedCorrelationId ?? randomUUID());
+    const correlationId =
+      typeof receivedCorrelationId === "string" &&
+      /^[a-f0-9-]{36}$/i.test(receivedCorrelationId)
+        ? receivedCorrelationId
+        : randomUUID();
     response.setHeader("x-correlation-id", correlationId);
 
     const startTime = Date.now();
@@ -43,7 +71,7 @@ export class LoggingInterceptor implements NestInterceptor {
       query: this.sanitize(query),
       params: this.sanitize(params),
       body: this.sanitize(body),
-      userAgent,
+      userAgent: this.sanitize(request.get("user-agent") || ""),
     });
 
     return next.handle().pipe(
@@ -87,40 +115,25 @@ export class LoggingInterceptor implements NestInterceptor {
     );
   }
 
-  private sanitize(obj: unknown): unknown {
-    if (!obj || typeof obj !== "object") return obj;
-
-    if (Array.isArray(obj)) return obj.map((value) => this.sanitize(value));
-
-    const sensitiveKeys = new Set([
-      "password",
-      "senha",
-      "token",
-      "authorization",
-      "auth",
-      "jwt",
-      "access_token",
-      "refresh_token",
-      "identityuserid",
-      "userid",
-      "cpf",
-      "cnpj",
-    ]);
-
-    const result: Record<string, unknown> = {};
-
-    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      const lowerKey = key.toLowerCase();
-      if (sensitiveKeys.has(lowerKey)) {
-        result[key] = "[REDACTED]";
-      } else if (typeof value === "object" && value !== null) {
-        result[key] = this.sanitize(value);
-      } else {
-        result[key] = value;
-      }
+  private sanitize(value: unknown): unknown {
+    if (typeof value === "string") {
+      // Defense in depth for compact JWTs embedded under an unexpected field name.
+      return value.replace(
+        /\beyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*/g,
+        "[REDACTED]",
+      );
     }
+    if (!value || typeof value !== "object") return value;
+    if (Array.isArray(value)) return value.map((item) => this.sanitize(item));
 
-    return result;
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        SENSITIVE_KEYS.has(key.toLowerCase().replace(/[_-]/g, ""))
+          ? "[REDACTED]"
+          : this.sanitize(item),
+      ]),
+    );
   }
 
   private getResponseSize(data: unknown): number | undefined {

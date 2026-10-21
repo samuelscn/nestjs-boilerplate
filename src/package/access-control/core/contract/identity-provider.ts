@@ -10,7 +10,7 @@ export interface IdentityCredentials {
 
 /** Identity data trusted by the application after credential validation. */
 export interface AuthenticatedIdentity {
-  /** Stable Ginga Identity subject (`sub` in the future OIDC access token). */
+  /** Stable Ginga Identity subject (`sub` in the verified access token). */
   readonly userId: string;
 }
 

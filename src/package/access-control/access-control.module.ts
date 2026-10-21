@@ -25,8 +25,8 @@ import { AccessInterceptor } from "./http/rest/access.interceptor";
 import { AccessController } from "./http/rest/controller/access.controller";
 import { TenantController } from "./http/rest/controller/tenant.controller";
 import { IdentityProvider } from "./core/contract/identity-provider";
-import { FakeIdentityProvider } from "./core/identity/fake-identity.provider";
-import { OidcIdentityProvider } from "./core/identity/oidc-identity.provider";
+import { createIdentityProvider } from "./core/identity/identity-provider.factory";
+import { AuthenticationErrorFilter } from "./http/rest/authentication-error.filter";
 import { PermissionGuard } from "./http/rest/permission.guard";
 import {
   HeaderTenantResolver,
@@ -71,14 +71,20 @@ export class AccessControlModule {
         RequestContexts,
         AccessService,
         AccessHttpState,
-        {
-          provide: IdentityProvider,
-          useClass:
-            adapters.identity ??
-            (adapters.identityProvider === "oidc"
-              ? OidcIdentityProvider
-              : FakeIdentityProvider),
-        },
+        adapters.identity
+          ? {
+              provide: IdentityProvider,
+              useClass: adapters.identity,
+            }
+          : {
+              provide: IdentityProvider,
+              inject: [ConfigService],
+              useFactory: (config: ConfigService<ApplicationConfig>) =>
+                createIdentityProvider(
+                  config.get("identity"),
+                  adapters.identityProvider,
+                ),
+            },
         {
           provide: TenantResolver,
           useClass: adapters.tenantResolver ?? HeaderTenantResolver,
@@ -103,6 +109,7 @@ export class AccessControlModule {
         { provide: APP_GUARD, useClass: PermissionGuard },
         { provide: APP_INTERCEPTOR, useClass: AccessInterceptor },
         { provide: APP_FILTER, useClass: AccessErrorFilter },
+        { provide: APP_FILTER, useClass: AuthenticationErrorFilter },
       ],
       exports: [
         AccessService,
