@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import {
   AccessError,
@@ -10,9 +10,17 @@ import {
   RequestContext,
   RequestContexts,
 } from "src/package/shared/module/authorization";
+import { DomainError } from "src/package/shared/module/problem";
 import { AccessStore } from "../contract/access-store";
 import {
+  IdentityCredentials,
+  IdentityProvider,
+} from "../contract/identity-provider";
+import {
   Member,
+  MemberPage,
+  MemberQuery,
+  MEMBER_STATUSES,
   Role,
   RoleInput,
   AccessProblem,
@@ -20,12 +28,16 @@ import {
   TenantInput,
 } from "../model/access.model";
 
+const PROFILE_TTL_MS = 24 * 60 * 60 * 1000;
+const LAST_SEEN_RESOLUTION_MS = 5 * 60 * 1000;
+
 @Injectable()
 export class AccessService {
   constructor(
     private readonly store: AccessStore,
     private readonly authorization: AuthorizationService,
     private readonly contexts: RequestContexts,
+    @Optional() private readonly identities?: IdentityProvider,
   ) {}
 
   get mode() {
@@ -76,18 +88,144 @@ export class AccessService {
     });
   }
 
-  /** Effective access of the caller: what the UI may offer. The API still authorizes every call. */
-  myAccess(): {
+  /**
+   * Effective access of the caller: what the UI may offer (the API still authorizes
+   * every call). Also refreshes the caller's display profile when stale and, in
+   * single mode, binds a pending invitation whose email the identity verified.
+   */
+  async myAccess(credentials?: IdentityCredentials): Promise<{
     userId: string;
     roleIds: readonly string[];
     permissions: readonly Permission[];
-  } {
-    const { identity, authorization } = this.contexts.current();
+  }> {
+    const { identity } = this.contexts.current();
+    let context = this.contexts.current();
+    const now = new Date();
+    let member = await this.store.findMemberByIdentity(identity.userId);
+    const stale =
+      !member?.profileSyncedAt ||
+      now.getTime() - member.profileSyncedAt.getTime() > PROFILE_TTL_MS;
+    const profile =
+      stale && credentials && this.identities
+        ? await this.identities.profile(credentials)
+        : null;
+    if (
+      !member &&
+      this.mode === "single" &&
+      profile?.email &&
+      profile.emailVerified &&
+      (await this.store.claimInvitation(identity.userId, profile.email))
+    ) {
+      member = await this.store.findMemberByIdentity(identity.userId);
+      await this.store.audit("membership.claimed", identity.userId, member.id);
+      context = (await this.store.loadContext(identity)) ?? context;
+    }
+    if (member) {
+      const seen =
+        !member.lastSeenAt ||
+        now.getTime() - member.lastSeenAt.getTime() > LAST_SEEN_RESOLUTION_MS;
+      if (profile || seen)
+        await this.store.updateProfile(member.id, {
+          ...(seen ? { lastSeenAt: now } : {}),
+          ...(profile
+            ? {
+                displayName: profile.displayName,
+                // Only a verified email replaces the one the invitation used.
+                ...(profile.emailVerified && profile.email
+                  ? { email: profile.email }
+                  : {}),
+                profileSyncedAt: now,
+              }
+            : {}),
+        });
+    }
     return {
       userId: identity.userId,
-      roleIds: authorization.roleIds,
-      permissions: authorization.permissions,
+      roleIds: context.authorization.roleIds,
+      permissions: context.authorization.permissions,
     };
+  }
+
+  listMembersPage(query: MemberQuery): Promise<MemberPage> {
+    return this.execute(Permission.member.read, () => {
+      if (
+        query.q.length > 120 ||
+        query.page < 1 ||
+        query.pageSize < 1 ||
+        query.pageSize > 100 ||
+        query.roleIds.length > 50 ||
+        !query.statuses.every((status) => MEMBER_STATUSES.includes(status))
+      )
+        throw new AccessError("invalid");
+      return this.store.listMembersPage(query);
+    });
+  }
+
+  /** Single mode: the invitee becomes active on first sign-in with this verified email. */
+  inviteMember(email: string, roleId: string): Promise<Member> {
+    return this.execute(Permission.member.invite, async (context) => {
+      if (this.mode !== "single") throw new AccessError("forbidden");
+      const normalized =
+        typeof email === "string" ? email.trim().toLowerCase() : "";
+      if (
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized) ||
+        normalized.length > 254
+      )
+        throw new AccessError("invalid");
+      this.authorization.require(context, Permission.role.assign);
+      const role = await this.requireRole(roleId);
+      this.manageable(role, context);
+      if (
+        role.slug === "owner" &&
+        !context.authorization.roleIds.includes(role.id)
+      )
+        throw new AccessError("forbidden");
+      const member = await this.store.inviteMember(normalized);
+      await this.store.assignRole(member.id, role.id);
+      await this.store.audit(
+        "membership.invited",
+        context.identity.userId,
+        member.id,
+      );
+      return { ...member, roleIds: [role.id] };
+    });
+  }
+
+  setMemberStatus(id: string, status: "active" | "suspended"): Promise<Member> {
+    return this.execute(Permission.member.update, async (context) => {
+      if (status !== "active" && status !== "suspended")
+        throw new AccessError("invalid");
+      const member = await this.requireMember(id);
+      if (member.identityUserId === context.identity.userId)
+        throw new DomainError("rule", AccessProblem.SELF_MANAGEMENT_FORBIDDEN);
+      if (member.status === "invited")
+        throw new DomainError("rule", AccessProblem.INVITATION_PENDING);
+      if (member.status === status) return member;
+      const roles = await this.store.listRoles();
+      for (const role of roles.filter((role) =>
+        member.roleIds.includes(role.id),
+      )) {
+        this.manageable(role, context);
+        if (role.slug === "owner") {
+          if (!context.authorization.roleIds.includes(role.id))
+            throw new AccessError("forbidden");
+          if (status === "suspended" && (await this.store.countOwners()) <= 1)
+            throw new AccessError(
+              "conflict",
+              AccessProblem.LAST_OWNER_REQUIRED,
+            );
+        }
+      }
+      await this.store.updateMemberStatus(id, status);
+      await this.store.audit(
+        status === "suspended"
+          ? "membership.suspended"
+          : "membership.reactivated",
+        context.identity.userId,
+        id,
+      );
+      return { ...member, status };
+    });
   }
 
   private validateScope(scope?: string): void {

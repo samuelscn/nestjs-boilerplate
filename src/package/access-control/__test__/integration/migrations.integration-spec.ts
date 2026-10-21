@@ -15,8 +15,11 @@ describe.each(["single", "tenant"] as const)(
       await db.migration.undoLastMigration();
       await db.migration.runMigrations();
       await new AccessDatabaseCheck(db.source, mode).onModuleInit();
-      await db.migration.undoLastMigration();
-      await db.migration.undoLastMigration();
+      const [{ count }] = await db.migration.query<{ count: string }[]>(
+        "SELECT count(*) FROM access_migrations",
+      );
+      for (let index = 0; index < Number(count); index++)
+        await db.migration.undoLastMigration();
       expect(
         await db.migration.query(
           "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> 'access_migrations'",

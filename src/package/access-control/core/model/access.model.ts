@@ -14,10 +14,39 @@ export interface Role {
   createdAt: Date;
   updatedAt: Date;
 }
+export const MEMBER_STATUSES = ["invited", "active", "suspended"] as const;
+export type MemberStatus = (typeof MEMBER_STATUSES)[number];
 export interface Member {
   id: string;
-  identityUserId: string;
+  /** Null while an invitation is pending. */
+  identityUserId: string | null;
+  email: string | null;
+  displayName: string | null;
+  status: MemberStatus;
+  lastSeenAt: Date | null;
+  /** Internal: when the display profile was last refreshed from the identity provider. */
+  profileSyncedAt?: Date | null;
   roleIds: string[];
+}
+export interface MemberQuery {
+  /** Case-insensitive match on display name or email. */
+  q: string;
+  roleIds: readonly string[];
+  statuses: readonly MemberStatus[];
+  page: number;
+  pageSize: number;
+}
+export interface MemberPage {
+  items: Member[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+/** Display data from the identity provider; never used for authorization. */
+export interface IdentityProfile {
+  displayName: string | null;
+  email: string | null;
+  emailVerified: boolean;
 }
 export interface RoleInput {
   name: string;
@@ -39,6 +68,10 @@ export type AuditEvent =
   | "tenant.created"
   | "membership.created"
   | "membership.removed"
+  | "membership.invited"
+  | "membership.claimed"
+  | "membership.suspended"
+  | "membership.reactivated"
   | "role.created"
   | "role.updated"
   | "role.deleted"
@@ -52,4 +85,10 @@ export const AccessProblem = {
   SYSTEM_ROLE_IMMUTABLE: "SYSTEM_ROLE_IMMUTABLE",
   /** The operation would leave the scope without an owner. */
   LAST_OWNER_REQUIRED: "LAST_OWNER_REQUIRED",
+  /** A member with the same identity or email already exists. */
+  MEMBER_ALREADY_EXISTS: "MEMBER_ALREADY_EXISTS",
+  /** A pending invitation becomes active only when the invitee signs in. */
+  INVITATION_PENDING: "INVITATION_PENDING",
+  /** Members cannot suspend themselves. */
+  SELF_MANAGEMENT_FORBIDDEN: "SELF_MANAGEMENT_FORBIDDEN",
 } as const;

@@ -6,9 +6,13 @@ import {
   HttpCode,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Put,
+  Query,
+  Req,
 } from "@nestjs/common";
+import type { Request } from "express";
 import {
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -17,14 +21,26 @@ import {
 } from "@nestjs/swagger";
 import { Permission } from "src/package/shared/module/authorization";
 import { AccessService } from "../../../core/service/access.service";
-import { MemberDto, RoleDto } from "../dto/access.dto";
 import {
+  InvitationDto,
+  MemberDto,
+  MemberQueryDto,
+  MemberStatusDto,
+  RoleDto,
+} from "../dto/access.dto";
+import { bearerIdentityCredentials } from "../bearer-identity-credentials";
+import {
+  MemberPageResponseDto,
   MemberResponseDto,
   MyAccessResponseDto,
   PermissionCatalogResponseDto,
   RoleResponseDto,
 } from "../dto/access-response.dto";
-import { RequireMembership, RequirePermission } from "../permission.decorator";
+import {
+  RequireAllPermissions,
+  RequireMembership,
+  RequirePermission,
+} from "../permission.decorator";
 
 @ApiTags("access")
 @Controller("access")
@@ -33,8 +49,10 @@ export class AccessController {
   @Get("me")
   @RequireMembership()
   @ApiOkResponse({ type: MyAccessResponseDto })
-  me(): MyAccessResponseDto {
-    const access = this.access.myAccess();
+  async me(@Req() request: Request): Promise<MyAccessResponseDto> {
+    const access = await this.access.myAccess(
+      bearerIdentityCredentials(request) ?? undefined,
+    );
     return {
       userId: access.userId,
       roleIds: [...access.roleIds],
@@ -78,11 +96,38 @@ export class AccessController {
     return this.access.deleteRole(id);
   }
   @Get("members")
-  @ApiOkResponse({ type: [MemberResponseDto] })
+  @ApiOkResponse({ type: MemberPageResponseDto })
   @RequirePermission(Permission.member.read)
-  async listMembers(): Promise<MemberResponseDto[]> {
-    return (await this.access.listMembers()).map((member) =>
-      MemberResponseDto.from(member),
+  async listMembers(
+    @Query() query: MemberQueryDto,
+  ): Promise<MemberPageResponseDto> {
+    return MemberPageResponseDto.from(
+      await this.access.listMembersPage({
+        q: query.q?.trim() ?? "",
+        roleIds: query.role,
+        statuses: query.status,
+        page: query.page,
+        pageSize: query.pageSize,
+      }),
+    );
+  }
+  @Post("members/invitations")
+  @ApiCreatedResponse({ type: MemberResponseDto })
+  @RequireAllPermissions(Permission.member.invite, Permission.role.assign)
+  async invite(@Body() body: InvitationDto): Promise<MemberResponseDto> {
+    return MemberResponseDto.from(
+      await this.access.inviteMember(body.email, body.roleId),
+    );
+  }
+  @Patch("members/:id/status")
+  @ApiOkResponse({ type: MemberResponseDto })
+  @RequirePermission(Permission.member.update)
+  async setStatus(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() body: MemberStatusDto,
+  ): Promise<MemberResponseDto> {
+    return MemberResponseDto.from(
+      await this.access.setMemberStatus(id, body.status),
     );
   }
   @Post("members")

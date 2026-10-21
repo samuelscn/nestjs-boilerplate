@@ -8,6 +8,8 @@ export interface IdentityCredentials {
   readonly accessToken: string;
 }
 
+import type { IdentityProfile } from "../model/access.model";
+
 /** Identity data trusted by the application after credential validation. */
 export interface AuthenticatedIdentity {
   /** Stable Ginga Identity subject (`sub` in the verified access token). */
@@ -19,4 +21,13 @@ export abstract class IdentityProvider {
   abstract authenticate(
     credentials: IdentityCredentials,
   ): Promise<AuthenticatedIdentity | null>;
+
+  /**
+   * Display profile of the credential's subject, for member listings and invitation
+   * binding (verified email only). Best effort: null when unavailable. Never authorizes.
+   */
+  profile(credentials: IdentityCredentials): Promise<IdentityProfile | null> {
+    void credentials;
+    return Promise.resolve(null);
+  }
 }

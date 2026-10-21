@@ -14,3 +14,7 @@ exige um projeto de migração de dados, não uma simples troca de variável.
 
 Leia [autenticação e configuração](../../../docs/authentication.md),
 [o guia](../../../docs/authorization.md) e [a decisão arquitetural](../../../docs/decisions/001-authorization.md).
+
+Membros: status `invited`/`active`/`suspended`, perfil de exibição sincronizado do IdP
+e convite por email verificado (modo simples). Detalhes em
+[autorização](../../../docs/authorization.md#apis-de-gerenciamento).

@@ -218,20 +218,35 @@ operações encadeadas. Não há cache de permissions nem janela de invalidaçã
 
 ## APIs de gerenciamento
 
-| Endpoint                                         | Permission / regra                                       |
-| ------------------------------------------------ | -------------------------------------------------------- |
-| `POST /tenants`                                  | identidade autenticada; somente composição tenant        |
-| `GET /access/me`                                 | membro; permissions efetivas do chamador (para a UI)     |
-| `GET /access/permissions`                        | `role:read`; catálogo agrupado por recurso               |
-| `GET /access/roles`                              | `role:read`                                              |
-| `POST /access/roles`                             | `role:create`                                            |
-| `PUT /access/roles/:id`                          | `role:update`; substitui dados e conjunto de permissions |
-| `DELETE /access/roles/:id`                       | `role:delete`; somente custom                            |
-| `GET /access/members`                            | `member:read`                                            |
-| `POST /access/members`                           | `member:invite`; cria referência externa/membership      |
-| `DELETE /access/members/:id`                     | `member:remove`; protege último OWNER                    |
-| `PUT /access/members/:memberId/roles/:roleId`    | `role:assign`                                            |
-| `DELETE /access/members/:memberId/roles/:roleId` | `role:assign`                                            |
+| Endpoint                                         | Permission / regra                                           |
+| ------------------------------------------------ | ------------------------------------------------------------ |
+| `POST /tenants`                                  | identidade autenticada; somente composição tenant            |
+| `GET /access/me`                                 | membro; permissions efetivas do chamador (para a UI)         |
+| `GET /access/permissions`                        | `role:read`; catálogo agrupado por recurso                   |
+| `GET /access/roles`                              | `role:read`                                                  |
+| `POST /access/roles`                             | `role:create`                                                |
+| `PUT /access/roles/:id`                          | `role:update`; substitui dados e conjunto de permissions     |
+| `DELETE /access/roles/:id`                       | `role:delete`; somente custom                                |
+| `GET /access/members`                            | `member:read`; `q`, `role[]`, `status[]`, `page`, `pageSize` |
+| `POST /access/members/invitations`               | `member:invite` + `role:assign`; somente modo simples        |
+| `PATCH /access/members/:id/status`               | `member:update`; `active`/`suspended`, nunca a si mesmo      |
+| `POST /access/members`                           | `member:invite`; cria referência externa/membership          |
+| `DELETE /access/members/:id`                     | `member:remove`; protege último OWNER                        |
+| `PUT /access/members/:memberId/roles/:roleId`    | `role:assign`                                                |
+| `DELETE /access/members/:memberId/roles/:roleId` | `role:assign`                                                |
+
+Membros têm `status` (`invited`, `active`, `suspended`) e perfil de exibição
+(`displayName`, `email`, `lastSeenAt`). Somente membros `active` recebem permissions:
+suspender remove todo acesso sem apagar dados ou assignments. O perfil é lido do
+IdP (`IdentityProvider.profile`, OIDC UserInfo com o token do próprio chamador) em
+`GET /access/me` quando ausente ou com mais de 24 horas; nunca é usado para autorizar.
+
+Convite (modo simples): `POST /access/members/invitations` cria um membro `invited`
+sem identidade, com a role escolhida. No primeiro `GET /access/me` de uma identidade
+sem membro, se o IdP afirmar o mesmo email **verificado** (`email_verified`), o
+convite é vinculado ao `sub` e passa a `active` (auditoria `membership.claimed`).
+Email não verificado nunca vincula. O IdP é responsável por cadastro/verificação;
+a API não envia emails. No modo tenant, o convite por email ainda não é suportado.
 
 No modo simples, `/access/members` administra referências locais de identidade, sem
 tenant ou membership no schema. Não cria usuário no IdP. No modo tenant, adiciona

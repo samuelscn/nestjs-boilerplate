@@ -41,6 +41,35 @@ describe("OIDC cryptographic validation and remote JWKS", () => {
     ).resolves.toEqual({ userId: "usr_test" });
   });
 
+  it("reads the display profile from UserInfo with the caller's own token", async () => {
+    const credentials = {
+      type: "bearer" as const,
+      accessToken: await server.sign(),
+    };
+    await expect(provider.profile(credentials)).resolves.toEqual({
+      displayName: "Test User",
+      email: "test.user@example.com",
+      emailVerified: true,
+    });
+    server.state.userinfo = { sub: "someone-else", email: "x@example.com" };
+    await expect(provider.profile(credentials)).resolves.toBeNull();
+    server.state.userinfo = { name: "Unverified", email: "u@example.com" };
+    await expect(provider.profile(credentials)).resolves.toMatchObject({
+      emailVerified: false,
+    });
+    await expect(
+      provider.profile({
+        type: "bearer",
+        accessToken: await server.sign({ exp: 1 }),
+      }),
+    ).resolves.toBeNull();
+    server.state.userinfo = {
+      name: "Test User",
+      email: "Test.User@example.com",
+      email_verified: true,
+    };
+  });
+
   it.each([
     ["wrong issuer", { iss: "https://attacker.example" }],
     ["wrong audience", { aud: "another-api" }],

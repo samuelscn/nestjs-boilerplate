@@ -6,6 +6,9 @@ import type {
   AccessMode,
   AuditEvent,
   Member,
+  MemberPage,
+  MemberQuery,
+  MemberStatus,
   Role,
   RoleInput,
   TenantInput,
@@ -32,6 +35,24 @@ export abstract class AccessStore {
   abstract listMembers(): Promise<Member[]>;
   abstract findMember(id: string): Promise<Member | null>;
   abstract createMember(identityUserId: string): Promise<Member>;
+  abstract listMembersPage(query: MemberQuery): Promise<MemberPage>;
+  abstract findMemberByIdentity(identityUserId: string): Promise<Member | null>;
+  abstract inviteMember(email: string): Promise<Member>;
+  /** Binds a pending invitation to the identity that proved the email. */
+  abstract claimInvitation(
+    identityUserId: string,
+    email: string,
+  ): Promise<boolean>;
+  abstract updateMemberStatus(id: string, status: MemberStatus): Promise<void>;
+  abstract updateProfile(
+    id: string,
+    profile: {
+      displayName?: string | null;
+      email?: string | null;
+      lastSeenAt?: Date;
+      profileSyncedAt?: Date;
+    },
+  ): Promise<void>;
   abstract deleteMember(id: string): Promise<void>;
   abstract assignRole(memberId: string, roleId: string): Promise<void>;
   abstract unassignRole(memberId: string, roleId: string): Promise<void>;

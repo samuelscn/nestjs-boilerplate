@@ -1,11 +1,34 @@
-import { Column, Entity, ForeignKey, Index, PrimaryColumn } from "typeorm";
+import {
+  Check,
+  Column,
+  Entity,
+  ForeignKey,
+  Index,
+  PrimaryColumn,
+} from "typeorm";
 import { AccessRecord } from "./access-record";
 import { PermissionEntity } from "./permission.entity";
+import type { MemberStatus } from "../../core/model/access.model";
 
 @Entity("access_identity_user")
+@Check(`"status" IN ('invited', 'active', 'suspended')`)
+@Check(`("status" = 'invited') = ("identityUserId" IS NULL)`)
+@Index(["email"], { unique: true, where: '"email" IS NOT NULL' })
 export class IdentityUserEntity extends AccessRecord {
-  @Column({ type: "varchar", length: 255, unique: true })
-  identityUserId!: string;
+  @Column({ type: "varchar", length: 255, unique: true, nullable: true })
+  identityUserId!: string | null;
+  /** Pending invitations have no identity until the invitee signs in with the verified email. */
+  @Column({ type: "varchar", length: 254, nullable: true }) email!:
+    | string
+    | null;
+  @Column({ type: "varchar", length: 120, nullable: true }) displayName!:
+    | string
+    | null;
+  @Column({ type: "varchar", length: 16, default: "active" })
+  status!: MemberStatus;
+  @Column({ type: "timestamptz", nullable: true }) lastSeenAt!: Date | null;
+  @Column({ type: "timestamptz", nullable: true })
+  profileSyncedAt!: Date | null;
 }
 
 @Entity("access_role")

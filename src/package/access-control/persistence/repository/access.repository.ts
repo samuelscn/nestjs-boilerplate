@@ -9,12 +9,28 @@ import { TenantDatabase } from "src/package/shared/module/tenant-database";
 import { AccessStore } from "../../core/contract/access-store";
 import {
   AccessMode,
+  AccessProblem,
   AuditEvent,
   Member,
+  MemberPage,
+  MemberQuery,
+  MemberStatus,
   Role,
   RoleInput,
   TenantInput,
 } from "../../core/model/access.model";
+
+type MemberRow = Omit<Member, "roleIds">;
+const toMember = (row: MemberRow, roleIds: string[]): Member => ({
+  id: row.id,
+  identityUserId: row.identityUserId,
+  email: row.email,
+  displayName: row.displayName,
+  status: row.status,
+  lastSeenAt: row.lastSeenAt,
+  profileSyncedAt: row.profileSyncedAt,
+  roleIds,
+});
 
 /** Table names are fixed product constants; all caller values are bound parameters. */
 export class AccessRepository extends AccessStore {
@@ -39,7 +55,13 @@ export class AccessRepository extends AccessStore {
     } catch (error) {
       if (error instanceof QueryFailedError) {
         const code = (error.driverError as { code?: string }).code;
-        if (code === "23505") throw new AccessError("conflict");
+        if (code === "23505")
+          throw new AccessError(
+            "conflict",
+            (error.driverError as { table?: string }).table === this.memberTable
+              ? AccessProblem.MEMBER_ALREADY_EXISTS
+              : undefined,
+          );
         if (["23503", "23514", "22P02"].includes(code ?? ""))
           throw new AccessError("invalid");
         if (code === "42501") throw new AccessError("forbidden");
@@ -115,7 +137,9 @@ export class AccessRepository extends AccessStore {
       .addSelect('permission_grant."permissionId"', "permissionId")
       .where('member."identityUserId" = :identity', {
         identity: identity.userId,
-      });
+      })
+      // Suspended members keep their data but receive no permissions.
+      .andWhere("member.status = 'active'");
     if (this.mode === "tenant")
       query
         .innerJoin("access_tenant", "tenant", 'tenant.id = member."tenantId"')
@@ -245,41 +269,134 @@ export class AccessRepository extends AccessStore {
   async listMembers(): Promise<Member[]> {
     const members = (await this.repository(this.memberTable).findBy(
       this.scope,
-    )) as Omit<Member, "roleIds">[];
-    const assignments = (await this.repository("access_role_assignment").findBy(
-      this.scope,
-    )) as { memberId: string; roleId: string }[];
-    return members.map((member) => ({
-      ...member,
-      roleIds: assignments
-        .filter((assignment) => assignment.memberId === member.id)
-        .map((assignment) => assignment.roleId),
-    }));
+    )) as MemberRow[];
+    return this.withRoles(members);
+  }
+  async listMembersPage(query: MemberQuery): Promise<MemberPage> {
+    const builder = this.repository(this.memberTable).createQueryBuilder(
+      "member",
+    );
+    if (this.mode === "tenant")
+      builder.where('member."tenantId" = :tenantId', this.scope);
+    if (query.q)
+      builder.andWhere(
+        "(member.\"displayName\" ILIKE :q ESCAPE '\\' OR member.email ILIKE :q ESCAPE '\\')",
+        { q: `%${query.q.replace(/[\\%_]/g, "\\$&")}%` },
+      );
+    if (query.statuses.length)
+      builder.andWhere("member.status IN (:...statuses)", {
+        statuses: [...query.statuses],
+      });
+    if (query.roleIds.length)
+      builder.andWhere(
+        `EXISTS (SELECT 1 FROM access_role_assignment assignment WHERE assignment."memberId" = member.id AND assignment."roleId" IN (:...roleIds)${this.mode === "tenant" ? ' AND assignment."tenantId" = member."tenantId"' : ""})`,
+        { roleIds: [...query.roleIds] },
+      );
+    const total = await builder.getCount();
+    const pageCount = Math.max(1, Math.ceil(total / query.pageSize));
+    const page = Math.min(query.page, pageCount);
+    const rows = (await builder
+      .orderBy(
+        "lower(coalesce(member.\"displayName\", member.email, ''))",
+        "ASC",
+      )
+      .addOrderBy("member.id", "ASC")
+      .offset((page - 1) * query.pageSize)
+      .limit(query.pageSize)
+      .getMany()) as MemberRow[];
+    return {
+      items: await this.withRoles(rows),
+      total,
+      page,
+      pageSize: query.pageSize,
+    };
+  }
+  private async withRoles(members: MemberRow[]): Promise<Member[]> {
+    if (!members.length) return [];
+    const assignments = (await this.repository("access_role_assignment")
+      .createQueryBuilder("assignment")
+      .where('assignment."memberId" IN (:...ids)', {
+        ids: members.map((member) => member.id),
+      })
+      .getMany()) as { memberId: string; roleId: string }[];
+    return members.map((member) =>
+      toMember(
+        member,
+        assignments
+          .filter((assignment) => assignment.memberId === member.id)
+          .map((assignment) => assignment.roleId),
+      ),
+    );
+  }
+  async findMemberByIdentity(identityUserId: string): Promise<Member | null> {
+    const member = (await this.repository(this.memberTable).findOneBy({
+      ...this.scope,
+      identityUserId,
+    })) as MemberRow | null;
+    return member ? (await this.withRoles([member]))[0] : null;
+  }
+  async inviteMember(email: string): Promise<Member> {
+    const result = await this.repository(this.memberTable).insert({
+      ...this.scope,
+      email,
+      status: "invited",
+      identityUserId: null,
+    });
+    return await this.findMember(result.identifiers[0].id as string);
+  }
+  async claimInvitation(
+    identityUserId: string,
+    email: string,
+  ): Promise<boolean> {
+    const result = await this.repository(this.memberTable)
+      .createQueryBuilder()
+      .update()
+      .set({ identityUserId, status: "active" })
+      .where("lower(email) = lower(:email)", { email })
+      .andWhere("status = 'invited'")
+      .andWhere('"identityUserId" IS NULL')
+      .andWhere(
+        this.mode === "tenant" ? '"tenantId" = :tenantId' : "TRUE",
+        this.scope,
+      )
+      .execute();
+    return result.affected === 1;
+  }
+  async updateMemberStatus(id: string, status: MemberStatus): Promise<void> {
+    const result = await this.repository(this.memberTable).update(
+      { ...this.scope, id },
+      { status },
+    );
+    if (result.affected !== 1) throw new AccessError("not_found");
+  }
+  async updateProfile(
+    id: string,
+    profile: {
+      displayName?: string | null;
+      email?: string | null;
+      lastSeenAt?: Date;
+      profileSyncedAt?: Date;
+    },
+  ): Promise<void> {
+    await this.repository(this.memberTable).update(
+      { ...this.scope, id },
+      profile,
+    );
   }
   async findMember(id: string): Promise<Member | null> {
     const member = (await this.repository(this.memberTable).findOneBy({
       ...this.scope,
       id,
-    })) as Omit<Member, "roleIds"> | null;
-    if (!member) return null;
-    const assignments = (await this.repository("access_role_assignment").findBy(
-      { ...this.scope, memberId: id },
-    )) as { roleId: string }[];
-    return {
-      ...member,
-      roleIds: assignments.map((assignment) => assignment.roleId),
-    };
+    })) as MemberRow | null;
+    return member ? (await this.withRoles([member]))[0] : null;
   }
   async createMember(identityUserId: string): Promise<Member> {
     const result = await this.repository(this.memberTable).insert({
       ...this.scope,
       identityUserId,
+      status: "active",
     });
-    return {
-      id: result.identifiers[0].id as string,
-      identityUserId,
-      roleIds: [],
-    };
+    return await this.findMember(result.identifiers[0].id as string);
   }
   async deleteMember(id: string): Promise<void> {
     await this.repository(this.memberTable).delete({ ...this.scope, id });
@@ -304,12 +421,21 @@ export class AccessRepository extends AccessStore {
       slug: "owner",
       isSystem: true,
     });
-    return owner
-      ? this.repository("access_role_assignment").countBy({
-          ...this.scope,
-          roleId: owner.id,
-        })
-      : 0;
+    if (!owner) return 0;
+    // Only active owners count: a suspended owner cannot administer the scope.
+    return this.repository("access_role_assignment")
+      .createQueryBuilder("assignment")
+      .innerJoin(
+        this.memberTable,
+        "member",
+        'member.id = assignment."memberId"' +
+          (this.mode === "tenant"
+            ? ' AND member."tenantId" = assignment."tenantId"'
+            : ""),
+      )
+      .where('assignment."roleId" = :roleId', { roleId: owner.id })
+      .andWhere("member.status = 'active'")
+      .getCount();
   }
   async audit(
     event: AuditEvent,

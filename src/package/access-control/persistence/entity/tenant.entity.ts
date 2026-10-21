@@ -1,4 +1,5 @@
 import {
+  Check,
   Column,
   Entity,
   ForeignKey,
@@ -8,6 +9,7 @@ import {
 } from "typeorm";
 import { AccessRecord } from "./access-record";
 import { PermissionEntity } from "./permission.entity";
+import type { MemberStatus } from "../../core/model/access.model";
 
 @Entity("access_tenant")
 export class TenantEntity extends AccessRecord {
@@ -16,12 +18,29 @@ export class TenantEntity extends AccessRecord {
 }
 
 @Entity("access_membership")
+@Check(`"status" IN ('invited', 'active', 'suspended')`)
+@Check(`("status" = 'invited') = ("identityUserId" IS NULL)`)
 @Unique(["tenantId", "identityUserId"])
 @Unique(["tenantId", "id"])
+@Index(["tenantId", "email"], { unique: true, where: '"email" IS NOT NULL' })
 @ForeignKey(() => TenantEntity, ["tenantId"], ["id"], { onDelete: "RESTRICT" })
 export class MembershipEntity extends AccessRecord {
   @Column("uuid") tenantId!: string;
-  @Column({ type: "varchar", length: 255 }) identityUserId!: string;
+  @Column({ type: "varchar", length: 255, nullable: true }) identityUserId!:
+    | string
+    | null;
+  /** Pending invitations have no identity until the invitee signs in with the verified email. */
+  @Column({ type: "varchar", length: 254, nullable: true }) email!:
+    | string
+    | null;
+  @Column({ type: "varchar", length: 120, nullable: true }) displayName!:
+    | string
+    | null;
+  @Column({ type: "varchar", length: 16, default: "active" })
+  status!: MemberStatus;
+  @Column({ type: "timestamptz", nullable: true }) lastSeenAt!: Date | null;
+  @Column({ type: "timestamptz", nullable: true })
+  profileSyncedAt!: Date | null;
 }
 
 @Entity("access_role")

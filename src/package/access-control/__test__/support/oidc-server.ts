@@ -28,6 +28,11 @@ export async function oidcServer() {
     hangDiscovery: false,
     hangJwks: false,
     metadata: {} as Record<string, unknown>,
+    userinfo: {
+      name: "Test User",
+      email: "Test.User@example.com",
+      email_verified: true,
+    } as Record<string, unknown>,
   };
   const server = createServer((req, res) => {
     res.setHeader("content-type", "application/json");
@@ -35,6 +40,16 @@ export async function oidcServer() {
       state.discoveryRequests++;
       if (state.hangDiscovery) return;
       res.end(JSON.stringify(state.metadata));
+    } else if (req.url === "/userinfo") {
+      const token = (req.headers.authorization ?? "").replace(/^Bearer /, "");
+      const sub = token.split(".")[1]
+        ? (
+            JSON.parse(
+              Buffer.from(token.split(".")[1], "base64url").toString(),
+            ) as { sub?: string }
+          ).sub
+        : undefined;
+      res.end(JSON.stringify({ sub, ...state.userinfo }));
     } else if (req.url === "/keys") {
       state.jwksRequests++;
       if (state.hangJwks) return;
@@ -49,7 +64,11 @@ export async function oidcServer() {
   const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   const issuer = `${origin}/api/auth`;
   const audience = "http://localhost:3000";
-  state.metadata = { issuer, jwks_uri: `${origin}/keys` };
+  state.metadata = {
+    issuer,
+    jwks_uri: `${origin}/keys`,
+    userinfo_endpoint: `${origin}/userinfo`,
+  };
   return {
     issuer,
     audience,

@@ -52,7 +52,7 @@ describe("Tenant RBAC and PostgreSQL security", () => {
     const migrations: unknown[] = await db.migration.query(
       "SELECT * FROM access_migrations",
     );
-    expect(migrations).toHaveLength(2);
+    expect(migrations.length).toBeGreaterThanOrEqual(3);
   });
   it("denies absent, nonexistent and nonmember tenant contexts", async () => {
     await expect(db.service.resolve(userA)).rejects.toThrow(AccessError);
