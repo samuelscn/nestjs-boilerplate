@@ -11,10 +11,7 @@ Pré-requisitos: Node.js 24+, npm 11+ e Docker.
 cp .env.example .env
 npm install
 docker compose up -d postgres
-DATABASE_USERNAME=ginga_migrator DATABASE_PASSWORD=ginga_migrator_dev npm run migration:access:run -- single
-DATABASE_USERNAME=ginga_migrator DATABASE_PASSWORD=ginga_migrator_dev npm run database:access:grant -- single ginga_app
-DATABASE_USERNAME=ginga_migrator DATABASE_PASSWORD=ginga_migrator_dev npm run migration:run
-docker compose exec postgres psql -U postgres -d nestjs_boilerplate -c 'GRANT SELECT, INSERT, UPDATE, DELETE ON example_item TO ginga_app'
+npm run db:migrate   # migrations com MIGRATION_DATABASE_* + grants para DATABASE_USERNAME
 npm run start:dev
 ```
 
@@ -24,7 +21,8 @@ somente tokens documentados e não contém RBAC/tenancy. Em produção,
 `IDENTITY_PROVIDER=fake` é recusado; configure o adapter OIDC do Ginga Identity.
 No modo simples, o exemplo oferece `POST /examples` e `GET /examples`, protegidos
 por permissions. Provisione o primeiro OWNER com
-`AccessService.initializeSingleApplication(externalOwnerId)` em script confiável.
+`npm run db:bootstrap-owner -- <identity user id>` (em produção,
+`node dist/database/bootstrap-owner.js <sub>` dentro do container).
 Consulte [o guia de autorização](docs/authorization.md) para integrar identidade,
 habilitar multitenancy e configurar banco existente/produção. As senhas acima são
 somente de desenvolvimento; o init do compose não altera volumes já existentes.
@@ -224,18 +222,19 @@ alternativas arquiteturais estão em [`docs/decisions/001-authorization.md`](doc
 
 ## Comandos
 
-| Comando                      | Finalidade                          |
-| ---------------------------- | ----------------------------------- |
-| `npm run start:dev`          | desenvolvimento com reload          |
-| `npm run lint`               | ESLint e regras arquiteturais       |
-| `npm run build`              | compilação TypeScript/Nest          |
-| `npm run test:unit`          | regras isoladas e rápidas           |
-| `npm run test:integration`   | TypeORM com PostgreSQL real         |
-| `npm run test:e2e`           | contrato HTTP completo              |
-| `npm run check`              | lint, build e testes unitários      |
-| `npm run security:audit`     | exige zero vulnerabilidades         |
-| `npm run migration:generate` | gera migration do pacote de exemplo |
-| `npm run migration:run`      | aplica migrations                   |
+| Comando                      | Finalidade                              |
+| ---------------------------- | --------------------------------------- |
+| `npm run start:dev`          | desenvolvimento com reload              |
+| `npm run lint`               | ESLint e regras arquiteturais           |
+| `npm run build`              | compilação TypeScript/Nest              |
+| `npm run test:unit`          | regras isoladas e rápidas               |
+| `npm run test:integration`   | TypeORM com PostgreSQL real             |
+| `npm run test:e2e`           | contrato HTTP completo                  |
+| `npm run check`              | lint, build e testes unitários          |
+| `npm run security:audit`     | exige zero vulnerabilidades             |
+| `npm run migration:generate` | gera migration do pacote de exemplo     |
+| `npm run db:migrate`         | migrations de todos os pacotes + grants |
+| `npm run db:bootstrap-owner` | cria o primeiro OWNER (modo simples)    |
 
 Testes de integração e E2E criam seu próprio PostgreSQL com Testcontainers;
 não dependem do banco local. Veja [`jest/README.md`](jest/README.md).
@@ -243,10 +242,14 @@ não dependem do banco local. Veja [`jest/README.md`](jest/README.md).
 ## Usando como boilerplate
 
 1. Renomeie `example` para o primeiro contexto de negócio.
-2. Atualize o nome da classe, conexão, tabela e scripts de migration.
+2. Atualize o nome da classe, conexão, tabela, `PackageDatabase` (registrado em
+   `src/database/migrate.ts`) e scripts de migration.
 3. Registre o novo módulo em `app.module.ts`.
 4. Preserve as fronteiras demonstradas no exemplo.
 5. Execute `npm run check` e a suíte de banco/HTTP pertinente.
+6. Deploy: siga o checklist de [`docs/deploy.md`](docs/deploy.md) (Railway, roles do
+   banco, variáveis, `OAUTH_RESOURCES` no Identity, `RAILWAY_TOKEN`, primeiro OWNER) e o
+   setup do fluxo em [`docs/workflow.md`](docs/workflow.md) (ruleset, bot, Linear).
 
 Authentication pertence ao IdP externo e entra por adapter. Authorization pertence
 à aplicação: [guia e exemplos](docs/authorization.md),
@@ -256,9 +259,9 @@ continuam entrando somente quando necessários ao produto.
 ## Colaboração
 
 - Hooks: Husky roda lint e unitários antes do commit.
-- Merge requests: `.gitlab/merge_request_templates/Default.md`.
+- Pull requests: `.github/pull_request_template.md`; fluxo em `docs/workflow.md`.
 - Agentes: `AGENTS.md` é o mapa de execução e `docs/agent-harness/` contém os detalhes.
 - Contribuição humana: `CONTRIBUTING.md`.
 - Docker: `docs/docker.md`.
-- CI: `.gitlab-ci.yml` verifica cada MR.
-- GitHub Actions: `docs/github-actions.md` descreve os checks obrigatórios.
+- CI: GitHub Actions; `docs/github-actions.md` descreve os checks obrigatórios.
+- Deploy: Railway (homolog na `main`, produção na release); `docs/deploy.md`.

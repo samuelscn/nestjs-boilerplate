@@ -17,3 +17,4 @@ export {
   FAKE_IDENTITY_TOKENS,
 } from "./core/identity/fake-identity.provider";
 export { TenantResolver } from "./http/rest/tenant-resolver";
+export { accessDatabase } from "./persistence/access-database";

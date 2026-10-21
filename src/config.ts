@@ -68,7 +68,8 @@ export type ApplicationConfig = AppConfig & SharedConfig;
 
 export const appConfigFactory = (): AppConfig => {
   const result = appConfigSchema.safeParse({
-    app: { port: process.env.APP_PORT },
+    // PORT is injected by hosting platforms (Railway); APP_PORT wins when both exist.
+    app: { port: process.env.APP_PORT ?? process.env.PORT },
     identity: {
       provider: process.env.IDENTITY_PROVIDER ?? "fake",
       issuer: process.env.OIDC_ISSUER,

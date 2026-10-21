@@ -11,6 +11,7 @@ import { TenantDatabase } from "src/package/shared/module/tenant-database";
 import { AccessMode } from "../../core/model/access.model";
 import { AccessService } from "../../core/service/access.service";
 import { AccessDatabaseCheck } from "../../persistence/access-database-check";
+import { grantAccessRuntime } from "../../persistence/access-database";
 import { accessDataSourceOptions } from "../../persistence/access-options";
 import { AccessRepository } from "../../persistence/repository/access.repository";
 
@@ -52,19 +53,7 @@ export async function securityDatabase(mode: AccessMode, poolSize = 2) {
   ).initialize();
   await migration.runMigrations();
   await migration.query("REVOKE CREATE ON SCHEMA public FROM PUBLIC");
-  await migration.query(`GRANT USAGE ON SCHEMA public TO "${runtime}"`);
-  const memberTable =
-    mode === "tenant" ? "access_membership" : "access_identity_user";
-  await migration.query(
-    `GRANT SELECT, INSERT, UPDATE, DELETE ON access_role, access_role_permission, access_role_assignment, ${memberTable} TO "${runtime}"`,
-  );
-  await migration.query(`GRANT SELECT ON access_permission TO "${runtime}"`);
-  await migration.query(`GRANT SELECT, INSERT ON access_audit TO "${runtime}"`);
-  await migration.query(
-    mode === "tenant"
-      ? `GRANT SELECT, INSERT, UPDATE ON access_tenant TO "${runtime}"`
-      : `GRANT SELECT, UPDATE ON access_lock TO "${runtime}"`,
-  );
+  await grantAccessRuntime(migration, mode, runtime);
   const options = accessDataSourceOptions(
     { ...database, name, username: runtime, password },
     mode,

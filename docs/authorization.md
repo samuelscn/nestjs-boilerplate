@@ -405,25 +405,23 @@ com o SQL fornecido; não apague o volume para aplicar essa mudança.
 Com `.env` a partir de `.env.example` e PostgreSQL iniciado:
 
 ```bash
-# Processo separado de migration; não use estas credenciais no runtime.
-DATABASE_USERNAME=ginga_migrator DATABASE_PASSWORD=ginga_migrator_dev npm run migration:access:run -- single
-DATABASE_USERNAME=ginga_migrator DATABASE_PASSWORD=ginga_migrator_dev npm run database:access:grant -- single ginga_app
-
-# Somente modo simples: schema e grants do exemplo descartável.
-DATABASE_USERNAME=ginga_migrator DATABASE_PASSWORD=ginga_migrator_dev npm run migration:run
-docker compose exec postgres psql -U postgres -d nestjs_boilerplate -c 'GRANT SELECT, INSERT, UPDATE, DELETE ON example_item TO ginga_app'
+# Migrations de todos os pacotes com MIGRATION_DATABASE_* e grants para DATABASE_USERNAME.
+npm run db:migrate
 ```
 
-Para tenant, use `AUTHORIZATION_MODE=tenant` no runtime e `-- tenant` nos scripts de
-access-control, em banco novo; não crie o schema do exemplo global. As migrations de
-runtime estão desabilitadas, inclusive no exemplo: aplique-as no deployment.
+Para tenant, use `AUTHORIZATION_MODE=tenant` em banco novo; o `db:migrate` segue o modo e
+não cria o schema do exemplo (que só existe no modo simples). As migrations de runtime
+estão desabilitadas, inclusive no exemplo: aplique-as no deployment (`preDeployCommand`
+do `railway.json`, ver [deploy](deploy.md)). Pacotes novos com tabelas exportam um
+`PackageDatabase` (migrations + grants runtime) e entram em `src/database/migrate.ts`.
 
 Em produção, o operador deve criar duas roles com credenciais do gerenciador de
 segredos: migrator sem superuser/BYPASSRLS, dono das tabelas com USAGE/CREATE no schema;
 runtime sem esses poderes, sem associação ao migrator. Execute
-`REVOKE CREATE ON SCHEMA public FROM PUBLIC` em banco dedicado. Execute migrations
-com a role migrator e depois o script `database:access:grant`, que concede grants
-específicos e não armazena credentials. Não conceda direitos por DEFAULT PRIVILEGES
+`REVOKE CREATE ON SCHEMA public FROM PUBLIC` em banco dedicado. Execute `node dist/database/migrate.js`
+(`npm run db:migrate` local), que roda as migrations com a role migrator e concede grants
+específicos ao runtime, sem armazenar credentials. O SQL de provisionamento está em
+[deploy](deploy.md). Não conceda direitos por DEFAULT PRIVILEGES
 genéricos. Configure TLS para a conexão conforme a infraestrutura do produto e
 limite a rede de acesso ao PostgreSQL.
 

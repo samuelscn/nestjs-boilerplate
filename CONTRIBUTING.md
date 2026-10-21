@@ -6,8 +6,8 @@ Crie mudanças pequenas, com motivação explícita e testes proporcionais ao ri
 2. Crie uma branch curta.
 3. Implemente dentro do pacote dono da responsabilidade.
 4. Execute `npm run check` e as suítes adicionais relevantes.
-5. Abra a MR usando o template do repositório.
+5. Abra o PR usando o template do repositório (fluxo em `docs/workflow.md`).
 
 O hook Husky é instalado pelo script `prepare`. Ele executa lint e testes
 unitários. Integração e E2E ficam fora do pre-commit porque sobem containers;
-devem rodar na MR/CI quando a mudança tocar persistência ou HTTP.
+devem rodar no PR/CI quando a mudança tocar persistência ou HTTP.

@@ -1,0 +1,42 @@
+name: Deploy production
+# Homologação: o próprio Railway faz deploy de cada push na main (ambiente homolog).
+# Produção: somente quando uma release é publicada no GitHub para uma tag que está na main.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag já publicada a reimplantar (rollback)
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.event_name != 'release' || !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      # Project token do ambiente production do Railway (escopo: só deploy nesse ambiente).
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE || 'api' }}
+      # Fixada: há relatos de regressão da 5.3.0 com project token em CI.
+      RAILWAY_CLI_VERSION: 5.2.0
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Somente tags que estão na main
+        run: git merge-base --is-ancestor HEAD origin/main
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm install --global "@railway/cli@${RAILWAY_CLI_VERSION}"
+      - name: Deploy (build pelo Dockerfile, migrations no preDeployCommand do railway.json)
+        run: railway up --ci --service "$RAILWAY_SERVICE"

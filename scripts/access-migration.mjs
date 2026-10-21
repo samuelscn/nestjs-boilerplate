@@ -4,11 +4,11 @@ import "dotenv/config";
 const [operation, mode = process.env.AUTHORIZATION_MODE ?? "single"] =
   process.argv.slice(2);
 if (
-  !["generate", "run", "revert"].includes(operation) ||
+  !["generate", "revert"].includes(operation) ||
   !["single", "tenant"].includes(mode)
 ) {
   throw new Error(
-    "Usage: npm run migration:access:<generate|run|revert> -- <single|tenant>",
+    "Usage: npm run migration:access:<generate|revert> -- <single|tenant>",
   );
 }
 const args = [

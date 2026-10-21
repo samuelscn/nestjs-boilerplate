@@ -18,3 +18,6 @@ Para tabelas tenant-scoped, use o wrapper `TenantDatabase` por DataSource, confo
 o [guia de autorização](../../../../../docs/authorization.md). O manager global do
 repository base não carrega contexto transacional/RLS: não o use para esse caso.
 O `AccessRecord` de RBAC não herda o soft delete incompleto de `DefaultEntity`.
+- `PackageDatabase`: contrato que cada pacote com tabelas exporta (`options` +
+  `grantRuntime`). Registre o pacote em `src/database/migrate.ts` para que
+  `npm run db:migrate` (e o deploy) aplique migrations e grants do usuário runtime.

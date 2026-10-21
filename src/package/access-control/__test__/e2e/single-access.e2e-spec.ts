@@ -7,6 +7,7 @@ import request from "supertest";
 import { appConfigFactory } from "src/config";
 import { ConfigModule } from "src/package/shared/module/config";
 import { ProblemModule } from "src/package/shared/module/problem";
+import { registerHealthRoutes } from "src/package/shared/module/health";
 import { AccessControlModule } from "../../index";
 import { securityDatabase } from "../support/security-database";
 
@@ -28,12 +29,17 @@ describe("Single-mode HTTP composition", () => {
       .useValue(db.source)
       .compile();
     app = moduleRef.createNestApplication({ logger: false });
+    registerHealthRoutes(app, [db.source]);
     await app.init();
     server = app.getHttpServer() as Server;
   });
   afterAll(async () => {
     if (app) await app.close();
     if (db) await db.close();
+  });
+  it("serves health checks without authentication", async () => {
+    await request(server).get("/health/live").expect(200, { status: "ok" });
+    await request(server).get("/health/ready").expect(200, { status: "ok" });
   });
   it("authorizes identities through the same guard without a tenant header", async () => {
     await request(server).get("/access/roles").expect(401);

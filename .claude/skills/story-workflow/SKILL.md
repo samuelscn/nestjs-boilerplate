@@ -1,6 +1,6 @@
 ---
 name: story-workflow
-description: Trunk-based flow for every Linear story - branch from main named after the issue, Conventional commits, push and a PR opened by the bot account so the code owner is asked to review. Use when starting work on a Linear issue (ID like GIN-42, a Linear link or "história"), creating a branch, committing, or opening a PR/MR.
+description: Trunk-based flow for every Linear story - branch from main named after the issue, Conventional commits, push and a PR opened by the bot account so the code owner is asked to review. Use when starting work on a Linear issue (ID like GIN-42, a Linear link or "história"), creating a branch, committing, or opening a PR.
 ---
 
 # Fluxo de história (Linear + Trunk-Based Development)
