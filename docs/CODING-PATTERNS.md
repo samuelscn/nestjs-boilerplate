@@ -68,6 +68,13 @@ o CI falha (`openapi:check`) se ele estiver defasado. Fora de produção, a API
 serve a documentação em `/docs`. O plugin CLI do Swagger não é usado: ele gera
 imports quebrados em caminhos com caracteres não ASCII.
 
+## Feature flags
+
+Funcionalidade nova ou arriscada nasce atrás de uma flag registrada em
+`src/feature-flags.ts` (padrão seguro, dono, `removeBy`). Use `@FeatureFlag()` no
+handler (desligada responde 404) e `FeatureFlags.isEnabled()` para variações no
+service. Veja [feature-flags](../src/package/shared/module/feature-flags/README.md).
+
 ## Imports entre pacotes
 
 Exponha contratos mínimos pelo `index.ts` ou por `public-api/`. Não importe

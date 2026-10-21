@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { ConfigException } from "src/package/shared/module/config";
 import { DEFAULT_PROBLEM_TYPE_BASE } from "src/package/shared/module/problem/problem-details";
+import { parseFlags } from "src/package/shared/module/feature-flags/feature-flags";
+import { flagDefinitions } from "./feature-flags";
 import { SharedConfig } from "src/package/shared/module/config/util/shared.config";
 
 export const oidcUrlSchema = z.url().refine((value) => {
@@ -28,6 +30,21 @@ const appConfigSchema = z.object({
       audience: z.string().trim().min(1),
     }),
   ]),
+  featureFlags: z
+    .string()
+    .max(4096)
+    .optional()
+    .transform((value, ctx) => {
+      try {
+        return parseFlags(flagDefinitions, value);
+      } catch {
+        ctx.addIssue({
+          code: "custom",
+          message: "Unknown feature flag or value",
+        });
+        return z.NEVER;
+      }
+    }),
   problem: z.object({
     typeBase: z
       .string()
@@ -57,6 +74,7 @@ export const appConfigFactory = (): AppConfig => {
       issuer: process.env.OIDC_ISSUER,
       audience: process.env.OIDC_AUDIENCE,
     },
+    featureFlags: process.env.FEATURE_FLAGS || undefined,
     problem: { typeBase: process.env.PROBLEM_TYPE_BASE || undefined },
     authorization: { mode: process.env.AUTHORIZATION_MODE },
     database: {

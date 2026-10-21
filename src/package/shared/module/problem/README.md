@@ -8,15 +8,15 @@ Contrato público de erros da API: [RFC 9457](https://www.rfc-editor.org/rfc/rfc
 ```jsonc
 {
   "type": "urn:ginga:problem:last-owner-required", // PROBLEM_TYPE_BASE + code
-  "title": "Last Owner Required",   // por tipo, inglês, para desenvolvedores
+  "title": "Last Owner Required", // por tipo, inglês, para desenvolvedores
   "status": 409,
-  "detail": "…",                    // opcional, inglês, nunca em 5xx
-  "instance": "/access/members/…",  // path sem query string
-  "code": "LAST_OWNER_REQUIRED",    // identidade estável: clientes decidem e traduzem por ele
-  "params": { "max": 32 },          // valores para a mensagem traduzida (só primitivos)
+  "detail": "…", // opcional, inglês, nunca em 5xx
+  "instance": "/access/members/…", // path sem query string
+  "code": "LAST_OWNER_REQUIRED", // identidade estável: clientes decidem e traduzem por ele
+  "params": { "max": 32 }, // valores para a mensagem traduzida (só primitivos)
   "errors": [{ "field": "email", "code": "IS_EMAIL" }], // só em validação
-  "traceId": "…",                   // == header x-correlation-id e log
-  "timestamp": "2026-10-20T21:00:00.000Z"
+  "traceId": "…", // == header x-correlation-id e log
+  "timestamp": "2026-10-20T21:00:00.000Z",
 }
 ```
 

@@ -20,6 +20,7 @@ import {
   ApiTags,
 } from "@nestjs/swagger";
 import { Permission } from "src/package/shared/module/authorization";
+import { FeatureFlag } from "src/package/shared/module/feature-flags";
 import { AccessService } from "../../../core/service/access.service";
 import {
   InvitationDto,
@@ -112,6 +113,7 @@ export class AccessController {
     );
   }
   @Post("members/invitations")
+  @FeatureFlag("memberInvitations")
   @ApiCreatedResponse({ type: MemberResponseDto })
   @RequireAllPermissions(Permission.member.invite, Permission.role.assign)
   async invite(@Body() body: InvitationDto): Promise<MemberResponseDto> {
